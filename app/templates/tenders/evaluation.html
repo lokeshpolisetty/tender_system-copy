@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Bid Evaluation — {{ tender.tender_number }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb breadcrumb-gov">
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.list_tenders') }}">Tenders</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.detail', tender_id=tender.id) }}">{{ tender.tender_number }}</a></li>
+    <li class="breadcrumb-item active">Evaluation</li>
+  </ol>
+</nav>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-bar-chart me-2"></i>Bid Evaluation Report</h1>
+    <p class="page-subtitle">{{ tender.title }} — {{ tender.tender_number }}</p>
+  </div>
+</div>
+
+<!-- Summary cards -->
+{% if bids %}
+{% set l1_bid = bids[0] if bids else None %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue mb-2"><i class="bi bi-collection"></i></div>
+      <div class="stat-value">{{ bids|length }}</div>
+      <div class="stat-label">Total Bids Received</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green mb-2"><i class="bi bi-currency-rupee"></i></div>
+      <div class="stat-value" style="font-size:1.3rem">
+        {% if l1_bid %}₹{{ "{:,.0f}".format(l1_bid.bid_amount) }}{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">L1 (Lowest) Bid</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-orange mb-2"><i class="bi bi-piggy-bank"></i></div>
+      <div class="stat-value" style="font-size:1.3rem">
+        {% if l1_bid %}
+        ₹{{ "{:,.0f}".format(tender.estimated_budget - l1_bid.bid_amount) }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Potential Savings</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple mb-2"><i class="bi bi-percent"></i></div>
+      <div class="stat-value">
+        {% if l1_bid and tender.estimated_budget %}
+        {{ "%.1f"|format((1 - l1_bid.bid_amount/tender.estimated_budget)*100) }}%
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Savings vs Budget</div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison chart -->
+<div class="card-gov mb-4">
+  <div class="card-header-gov"><i class="bi bi-bar-chart-horizontal me-2"></i>Bid Comparison</div>
+  <div class="card-gov-body">
+    <div style="position:relative;height:300px">
+      <canvas id="bidsChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Ranked bid table -->
+<div class="card-gov">
+  <div class="card-header-gov d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-table me-2"></i>Ranked Bid Summary</span>
+    <span style="font-size:.78rem;color:rgba(255,255,255,.7)">
+      Evaluation Method: {{ tender.evaluation_method }}
+    </span>
+  </div>
+  <div class="card-gov-body p-0">
+    <div class="table-responsive">
+      <table class="table table-gov mb-0">
+        <thead>
+          <tr>
+            <th style="width:60px">Rank</th>
+            <th>Vendor</th>
+            <th>Organisation</th>
+            <th>Bid Amount</th>
+            <th>vs Budget</th>
+            <th>Submitted At</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bid in bids %}
+          <tr style="{% if bid.is_l1 %}background:linear-gradient(90deg,rgba(26,122,74,.06),transparent){% endif %}">
+            <td>
+              {% if bid.rank == 1 %}
+              <div style="width:32px;height:32px;background:var(--accent);border-radius:50%;
+                          display:flex;align-items:center;justify-content:center;
+                          font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.9rem;color:var(--primary)">
+                L1
+              </div>
+              {% elif bid.rank == 2 %}
+              <div style="width:32px;height:32px;background:#e0e0e0;border-radius:50%;
+                          display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem">
+                L2
+              </div>
+              {% else %}
+              <div style="width:32px;height:32px;background:#f5f5f5;border-radius:50%;
+                          display:flex;align-items:center;justify-content:center;font-weight:600;
+                          font-size:.85rem;color:var(--text-muted)">
+                {{ bid.rank }}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              <div style="font-weight:600;font-size:.9rem">{{ bid.vendor.name }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted)">{{ bid.vendor.email }}</div>
+            </td>
+            <td style="font-size:.85rem">{{ bid.vendor.organization or '—' }}</td>
+            <td>
+              <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.1rem;
+                          color:{% if bid.is_l1 %}var(--success){% else %}var(--text-primary){% endif %}">
+                ₹{{ "{:,.0f}".format(bid.bid_amount) }}
+              </div>
+            </td>
+            <td>
+              {% set pct = (bid.bid_amount / tender.estimated_budget * 100) if tender.estimated_budget else 0 %}
+              <div style="font-size:.82rem;font-weight:600;
+                          color:{% if pct < 70 %}#c62828{% elif pct < 90 %}#e65100{% else %}var(--text-secondary){% endif %}">
+                {{ "%.1f"|format(pct) }}%
+              </div>
+              <div style="height:4px;background:#f0f0f0;border-radius:2px;margin-top:3px;width:80px">
+                <div style="height:100%;width:{{ [pct, 100]|min }}%;border-radius:2px;
+                            background:{% if pct < 70 %}#c62828{% elif pct < 90 %}#e65100{% else %}var(--success){% endif %}"></div>
+              </div>
+            </td>
+            <td style="font-size:.78rem;color:var(--text-secondary)">
+              {{ bid.submitted_at.strftime('%d %b %Y %H:%M') }}
+            </td>
+            <td>
+              <span class="status-badge status-{{ bid.status.value }}">
+                {{ bid.status.value|replace('_',' ')|title }}
+              </span>
+            </td>
+            <td>
+              {% if current_user.is_admin and tender.status.value == 'under_evaluation' and bid.status.value not in ['awarded','rejected'] %}
+              <form method="POST" action="{{ url_for('tenders.award_bid', tender_id=tender.id, bid_id=bid.id) }}"
+                    onsubmit="return confirm('Award contract to {{ bid.vendor.name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-gov-primary" style="font-size:.72rem;padding:.2rem .6rem">
+                  <i class="bi bi-award me-1"></i>Award
+                </button>
+              </form>
+              {% elif bid.status.value == 'awarded' %}
+              <span style="color:var(--success);font-weight:700;font-size:.82rem">
+                <i class="bi bi-check-circle me-1"></i>Awarded
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+  <h5 style="color:var(--text-secondary)">No bids have been opened yet</h5>
+  <p style="font-size:.875rem;color:var(--text-muted)">
+    Use the "Open Bids" action on the tender page to decrypt and evaluate bids.
+  </p>
+  <a href="{{ url_for('tenders.detail', tender_id=tender.id) }}" class="btn btn-gov-outline">
+    Back to Tender
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if bids %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const bidLabels = [{% for b in bids %}'{{ b.vendor.name[:20] }}'{% if not loop.last %},{% endif %}{% endfor %}];
+const bidAmounts = [{% for b in bids %}{{ b.bid_amount }}{% if not loop.last %},{% endif %}{% endfor %}];
+const bidColors = bidAmounts.map((a,i) => i===0 ? 'rgba(26,122,74,.9)' : 'rgba(13,59,110,.6)');
+const budget = {{ tender.estimated_budget }};
+
+new Chart(document.getElementById('bidsChart'), {
+  type: 'bar',
+  data: {
+    labels: bidLabels,
+    datasets: [
+      {
+        label: 'Bid Amount (₹)',
+        data: bidAmounts,
+        backgroundColor: bidColors,
+        borderRadius: 6,
+      },
+      {
+        label: 'Estimated Budget (₹)',
+        data: bidLabels.map(() => budget),
+        type: 'line',
+        borderColor: '#f4a11d',
+        borderWidth: 2,
+        borderDash: [6,3],
+        pointStyle: false,
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: ctx => '₹' + ctx.raw.toLocaleString('en-IN')
+        }
+      }
+    },
+    scales: {
+      y: {
+        ticks: { callback: v => '₹' + (v/100000).toFixed(0) + 'L' },
+        grid: { color: '#f0f0f0' }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

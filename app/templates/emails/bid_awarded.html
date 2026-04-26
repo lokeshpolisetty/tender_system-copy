@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
+<style>
+  body{font-family:Arial,sans-serif;background:#f4f6f9;margin:0;padding:20px}
+  .container{max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+  .header{background:linear-gradient(135deg,#f4a11d,#d4880d);color:#0d3b6e;padding:28px 32px;text-align:center}
+  .body{padding:28px 32px;color:#333}
+  .info-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:.88rem}
+  .footer{background:#f4f6f9;padding:16px 32px;font-size:.75rem;color:#888;text-align:center}
+  .trophy{font-size:3rem;display:block;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <span class="trophy">🏆</span>
+    <h2 style="margin:0;font-size:1.4rem;font-weight:800">Congratulations!</h2>
+    <p style="margin:6px 0 0;opacity:.8;font-size:.9rem">You have been awarded the contract</p>
+  </div>
+  <div class="body">
+    <p>Dear {{ user.name }},</p>
+    <p>We are pleased to inform you that your bid for the following tender has been <strong>selected for award</strong>:</p>
+    <div style="background:#fffbf0;border:2px solid #f4a11d;border-radius:10px;padding:18px;margin:16px 0">
+      <div class="info-row"><span style="color:#666">Tender No.</span><strong>{{ tender.tender_number }}</strong></div>
+      <div class="info-row"><span style="color:#666">Tender Title</span><span>{{ tender.title }}</span></div>
+      <div class="info-row"><span style="color:#666">Department</span><span>{{ tender.department or '—' }}</span></div>
+      <div class="info-row" style="border:none"><span style="color:#666">Awarded Amount</span>
+        <strong style="color:#137333;font-size:1rem">₹{{ "{:,.0f}".format(bid.bid_amount) if bid.bid_amount else '—' }}</strong>
+      </div>
+    </div>
+    <p style="font-size:.85rem;color:#555">Please contact the tendering authority at <a href="mailto:{{ tender.contact_email }}" style="color:#0d3b6e">{{ tender.contact_email or 'the department' }}</a> to proceed with contract signing and further formalities.</p>
+    <p style="font-size:.82rem;color:#888">This is an official communication from the Government of India e-Procurement System. All transactions are logged in the immutable audit trail.</p>
+  </div>
+  <div class="footer">© Government of India e-Procurement Portal — Reference: {{ tender.tender_number }}</div>
+</div>
+</body>
+</html>

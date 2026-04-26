@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Audit Trail{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar d-none d-lg-flex flex-column">
+  <div class="sidebar-heading">Analytics</div>
+  <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+    <i class="bi bi-bar-chart-line"></i>Overview</a>
+  <a class="nav-link active" href="{{ url_for('analytics.audit_log') }}">
+    <i class="bi bi-journal-text"></i>Audit Log</a>
+  <a class="nav-link" href="{{ url_for('analytics.fraud_detection') }}">
+    <i class="bi bi-shield-exclamation"></i>Fraud Detection</a>
+  <div class="sidebar-heading">Navigation</div>
+  <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+    <i class="bi bi-speedometer2"></i>Dashboard</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-journal-text me-2"></i>Immutable Audit Trail</h1>
+    <p class="page-subtitle">Every action is logged with a tamper-evident SHA-256 hash chain</p>
+  </div>
+  <!-- Integrity status -->
+  <div class="d-flex align-items-center gap-2 px-3 py-2"
+       style="border-radius:10px;{% if integrity_ok %}background:#e6f4ea;color:#137333{% else %}background:#fce8e6;color:#c62828{% endif %}">
+    <i class="bi bi-{% if integrity_ok %}shield-check{% else %}shield-x{% endif %} fs-5"></i>
+    <div>
+      <div style="font-weight:700;font-size:.875rem">
+        {% if integrity_ok %}Hash Chain Intact{% else %}Integrity Warning{% endif %}
+      </div>
+      <div style="font-size:.72rem">{% if integrity_ok %}No tampering detected{% else %}Chain mismatch detected!{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card-gov mb-4">
+  <div class="card-gov-body">
+    <form method="GET" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label-gov">Action Type</label>
+        <select name="action" class="form-select form-control-gov">
+          <option value="">All Actions</option>
+          {% for act in actions %}
+          <option value="{{ act }}" {% if act == action_filter %}selected{% endif %}>
+            {{ act|replace('_',' ')|title }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label-gov">Filter by User</label>
+        <select name="user_id" class="form-select form-control-gov">
+          <option value="">All Users</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {% if user_filter == u.id|string %}selected{% endif %}>
+            {{ u.name }} ({{ u.role.value }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-gov-primary w-100">
+          <i class="bi bi-filter me-1"></i>Filter
+        </button>
+      </div>
+      <div class="col-md-2">
+        <a href="{{ url_for('analytics.audit_log') }}" class="btn btn-gov-outline w-100">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Log table -->
+<div class="card-gov">
+  <div class="card-gov-body p-0">
+    <div class="table-responsive">
+      <table class="table table-gov mb-0">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Resource</th>
+            <th>Description</th>
+            <th>IP Address</th>
+            <th style="width:90px">Hash</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td style="font-size:.78rem;white-space:nowrap;font-family:'JetBrains Mono',monospace">
+              {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+            </td>
+            <td>
+              {% set action_colors = {
+                'user_register':'#1565c0','user_login':'#1565c0','user_logout':'#5f6368',
+                'tender_create':'#137333','tender_publish':'#0d904f','tender_cancel':'#c62828',
+                'bid_submit':'#e65100','bid_open':'#7b1fa2','bid_award':'#137333',
+                'bid_evaluate':'#0288d1',
+              } %}
+              <span style="font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:20px;
+                           background:rgba(0,0,0,.05);
+                           color:{{ action_colors.get(log.action.value, '#333') }}">
+                {{ log.action.value|replace('_',' ')|upper }}
+              </span>
+            </td>
+            <td>
+              {% if log.user %}
+              <div style="font-weight:600;font-size:.82rem">{{ log.user.name }}</div>
+              <div style="font-size:.72rem;color:var(--text-muted)">{{ log.user.role.value }}</div>
+              {% else %}
+              <span style="color:var(--text-muted);font-size:.82rem">System</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if log.resource_type %}
+              <span style="font-size:.75rem;background:#f0f4ff;color:var(--primary);
+                            padding:.15rem .5rem;border-radius:4px">
+                {{ log.resource_type }}:{{ log.resource_id }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td style="font-size:.82rem;max-width:280px">{{ log.description or '—' }}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-muted)">
+              {{ log.ip_address or '—' }}
+            </td>
+            <td>
+              {% if log.entry_hash %}
+              <span title="{{ log.entry_hash }}"
+                    style="font-family:'JetBrains Mono',monospace;font-size:.68rem;
+                           color:var(--text-muted);cursor:help">
+                {{ log.entry_hash[:8] }}…
+              </span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">No audit entries match your filters.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination pagination-gov justify-content-center">
+    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('analytics.audit_log', page=pagination.prev_num, action=action_filter, user_id=user_filter) }}">
+        <i class="bi bi-chevron-left"></i></a>
+    </li>
+    {% for p in pagination.iter_pages() %}
+      {% if p %}
+      <li class="page-item {% if p == pagination.page %}active{% endif %}">
+        <a class="page-link" href="{{ url_for('analytics.audit_log', page=p, action=action_filter, user_id=user_filter) }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('analytics.audit_log', page=pagination.next_num, action=action_filter, user_id=user_filter) }}">
+        <i class="bi bi-chevron-right"></i></a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

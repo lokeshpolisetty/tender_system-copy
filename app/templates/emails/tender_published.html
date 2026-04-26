@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
+  .container { max-width: 580px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+  .header { background: linear-gradient(135deg, #0d3b6e, #1a5fa8); color: #fff; padding: 24px 32px; }
+  .body { padding: 24px 32px; color: #333; }
+  .btn { display: inline-block; background: #f4a11d; color: #0d3b6e !important; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; margin: 16px 0; }
+  .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: .88rem; }
+  .footer { background: #f4f6f9; padding: 16px 32px; font-size: .75rem; color: #888; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div style="font-size:.75rem;font-weight:700;letter-spacing:1.5px;opacity:.7;text-transform:uppercase;margin-bottom:4px">New Tender Published</div>
+    <h2 style="margin:0;font-size:1.2rem">{{ tender.title }}</h2>
+    <div style="opacity:.7;font-size:.82rem;margin-top:4px">{{ tender.tender_number }}</div>
+  </div>
+  <div class="body">
+    <p>Dear {{ user.name }},</p>
+    <p>A new government tender has been published that may be of interest to your organization:</p>
+    <div style="background:#f8faff;border-radius:8px;padding:16px;margin:16px 0">
+      <div class="info-row"><span style="color:#666">Tender No.</span><strong>{{ tender.tender_number }}</strong></div>
+      <div class="info-row"><span style="color:#666">Department</span><span>{{ tender.department or '—' }}</span></div>
+      <div class="info-row"><span style="color:#666">Category</span><span>{{ tender.category or '—' }}</span></div>
+      <div class="info-row"><span style="color:#666">Estimated Budget</span><strong style="color:#1a7a4a">₹{{ "{:,.0f}".format(tender.estimated_budget) }}</strong></div>
+      <div class="info-row"><span style="color:#666">Submission Deadline</span><strong>{{ tender.bid_end_date.strftime('%d %b %Y, %H:%M') }}</strong></div>
+      <div class="info-row" style="border:none"><span style="color:#666">Days Remaining</span><strong style="color:#c0392b">{{ tender.days_remaining }} days</strong></div>
+    </div>
+    <a href="{{ tender_url }}" class="btn">📄 View Tender Details</a>
+    <p style="font-size:.82rem;color:#888">You are receiving this because you are a registered vendor. To manage notifications, visit your profile settings.</p>
+  </div>
+  <div class="footer">© Government of India e-Procurement Portal</div>
+</div>
+</body>
+</html>

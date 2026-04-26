@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar d-none d-lg-flex flex-column">
+  <div style="padding:.5rem .5rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem">
+    <div style="font-size:.75rem;font-weight:600;color:rgba(255,255,255,.5)">Signed in as</div>
+    <div style="font-weight:700;color:#fff;font-size:.95rem">{{ current_user.name }}</div>
+    <span class="badge-role badge-admin">Administrator</span>
+  </div>
+
+  <div class="sidebar-heading">Overview</div>
+  <a class="nav-link active" href="{{ url_for('main.dashboard') }}">
+    <i class="bi bi-speedometer2"></i>Dashboard</a>
+  <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+    <i class="bi bi-bar-chart-line"></i>Analytics</a>
+  <a class="nav-link" href="{{ url_for('analytics.audit_log') }}">
+    <i class="bi bi-journal-text"></i>Audit Log</a>
+  <a class="nav-link" href="{{ url_for('analytics.fraud_detection') }}">
+    <i class="bi bi-shield-exclamation"></i>Fraud Detection</a>
+
+  <div class="sidebar-heading">Tenders</div>
+  <a class="nav-link" href="{{ url_for('tenders.list_tenders', status='all') }}">
+    <i class="bi bi-file-earmark-text"></i>All Tenders</a>
+  <a class="nav-link" href="{{ url_for('tenders.create') }}">
+    <i class="bi bi-plus-circle"></i>Create Tender</a>
+
+  <div class="sidebar-heading">Account</div>
+  <a class="nav-link" href="{{ url_for('auth.profile') }}">
+    <i class="bi bi-person-gear"></i>Profile</a>
+  <form method="POST" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="nav-link w-100 text-start border-0 bg-transparent" style="color:rgba(255,100,100,.8)">
+      <i class="bi bi-box-arrow-right"></i>Logout</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">Welcome back, {{ current_user.name }} — Government e-Procurement Control Panel</p>
+  </div>
+  <a href="{{ url_for('tenders.create') }}" class="btn btn-gov-primary">
+    <i class="bi bi-plus-lg me-2"></i>Create Tender
+  </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  {% for val, label, icon, cls in [
+    (total_tenders, 'Total Tenders', 'bi-file-earmark-text', 'stat-icon-blue'),
+    (active_tenders, 'Active Tenders', 'bi-clock', 'stat-icon-green'),
+    (pending_evaluation, 'Pending Evaluation', 'bi-hourglass-split', 'stat-icon-orange'),
+    (awarded, 'Contracts Awarded', 'bi-award', 'stat-icon-purple'),
+    (total_vendors, 'Registered Vendors', 'bi-people', 'stat-icon-blue'),
+    (total_bids, 'Total Bids', 'bi-collection', 'stat-icon-green'),
+  ] %}
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="stat-icon {{ cls }}"><i class="bi {{ icon }}"></i></div>
+      </div>
+      <div class="stat-value">{{ val }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <!-- Recent Tenders -->
+  <div class="col-lg-8">
+    <div class="card-gov">
+      <div class="card-header-gov d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-file-earmark-text me-2"></i>My Recent Tenders</span>
+        <a href="{{ url_for('tenders.create') }}" class="btn btn-sm"
+           style="background:rgba(255,255,255,.2);color:#fff;border-radius:6px;font-size:.78rem;padding:.2rem .7rem">
+          + New
+        </a>
+      </div>
+      <div class="card-gov-body p-0">
+        {% if recent_tenders %}
+        <div class="table-responsive">
+          <table class="table table-gov mb-0">
+            <thead>
+              <tr>
+                <th>Tender No.</th>
+                <th>Title</th>
+                <th>Budget</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Bids</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in recent_tenders %}
+              <tr>
+                <td class="mono" style="font-size:.78rem">{{ t.tender_number }}</td>
+                <td>
+                  <a href="{{ url_for('tenders.detail', tender_id=t.id) }}"
+                     style="color:var(--text-primary);text-decoration:none;font-weight:500;font-size:.875rem">
+                    {{ t.title[:45] }}{% if t.title|length > 45 %}…{% endif %}
+                  </a>
+                </td>
+                <td style="font-size:.875rem;font-weight:600;color:var(--success)">
+                  ₹{{ "{:,.0f}".format(t.estimated_budget) }}
+                </td>
+                <td style="font-size:.78rem;color:var(--text-secondary)">
+                  {{ t.bid_end_date.strftime('%d %b %Y') }}
+                </td>
+                <td><span class="status-badge status-{{ t.status.value }}">{{ t.status.value|replace('_',' ')|title }}</span></td>
+                <td>
+                  <span style="font-weight:700;color:var(--primary)">{{ t.bid_count }}</span>
+                </td>
+                <td>
+                  <a href="{{ url_for('tenders.detail', tender_id=t.id) }}"
+                     class="btn btn-sm btn-gov-outline" style="font-size:.72rem;padding:.2rem .5rem">View</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-inbox d-block fs-2 mb-2 opacity-25"></i>
+          No tenders yet. <a href="{{ url_for('tenders.create') }}">Create one.</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Closing Soon -->
+  <div class="col-lg-4">
+    <div class="card-gov mb-4">
+      <div class="card-header-gov"><i class="bi bi-alarm me-2"></i>Closing Soon</div>
+      <div class="card-gov-body p-0">
+        {% if closing_soon %}
+        {% for t in closing_soon %}
+        <div style="padding:.8rem 1rem;border-bottom:1px solid var(--border)" class="{% if loop.last %}border-0{% endif %}">
+          <div style="font-size:.78rem;font-family:'JetBrains Mono',monospace;color:var(--text-muted)">{{ t.tender_number }}</div>
+          <div style="font-weight:600;font-size:.875rem;margin:.1rem 0">
+            <a href="{{ url_for('tenders.detail', tender_id=t.id) }}"
+               style="color:var(--text-primary);text-decoration:none">
+              {{ t.title[:40] }}{% if t.title|length > 40 %}…{% endif %}
+            </a>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span style="font-size:.75rem;color:var(--text-muted)">
+              {{ t.bid_end_date.strftime('%d %b, %H:%M') }}
+            </span>
+            {% if t.days_remaining <= 1 %}
+            <span class="deadline-badge deadline-urgent">{{ t.days_remaining }}d left</span>
+            {% elif t.days_remaining <= 3 %}
+            <span class="deadline-badge deadline-warning">{{ t.days_remaining }}d left</span>
+            {% else %}
+            <span class="deadline-badge deadline-normal">{{ t.days_remaining }}d left</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-3 text-muted" style="font-size:.875rem">No tenders closing soon.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="card-gov">
+      <div class="card-header-gov"><i class="bi bi-lightning me-2"></i>Quick Actions</div>
+      <div class="card-gov-body d-flex flex-column gap-2">
+        <a href="{{ url_for('tenders.create') }}" class="btn btn-gov-primary">
+          <i class="bi bi-plus-circle me-2"></i>New Tender</a>
+        <a href="{{ url_for('analytics.dashboard') }}" class="btn btn-gov-outline">
+          <i class="bi bi-bar-chart me-2"></i>Analytics</a>
+        <a href="{{ url_for('analytics.audit_log') }}" class="btn btn-gov-outline">
+          <i class="bi bi-journal-text me-2"></i>Audit Trail</a>
+        <a href="{{ url_for('analytics.fraud_detection') }}" class="btn btn-gov-outline">
+          <i class="bi bi-shield-exclamation me-2"></i>Fraud Detection</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

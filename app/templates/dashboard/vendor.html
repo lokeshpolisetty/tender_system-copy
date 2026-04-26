@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Vendor Dashboard{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar d-none d-lg-flex flex-column">
+  <div style="padding:.5rem .5rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem">
+    <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Signed in as</div>
+    <div style="font-weight:700;color:#fff">{{ current_user.name }}</div>
+    <span class="badge-role badge-vendor">Vendor</span>
+  </div>
+  <div class="sidebar-heading">My Activity</div>
+  <a class="nav-link active" href="{{ url_for('main.dashboard') }}">
+    <i class="bi bi-speedometer2"></i>Dashboard</a>
+  <a class="nav-link" href="{{ url_for('bids.my_bids') }}">
+    <i class="bi bi-collection"></i>My Bids</a>
+  <div class="sidebar-heading">Tenders</div>
+  <a class="nav-link" href="{{ url_for('tenders.list_tenders') }}">
+    <i class="bi bi-file-earmark-text"></i>Browse Tenders</a>
+  <a class="nav-link" href="{{ url_for('tenders.list_tenders', status='open') }}">
+    <i class="bi bi-clock"></i>Open for Bids</a>
+  <div class="sidebar-heading">Account</div>
+  <a class="nav-link" href="{{ url_for('auth.profile') }}">
+    <i class="bi bi-person-gear"></i>Profile</a>
+  <form method="POST" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="nav-link w-100 text-start border-0 bg-transparent" style="color:rgba(255,100,100,.8)">
+      <i class="bi bi-box-arrow-right"></i>Logout</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">My Dashboard</h1>
+    <p class="page-subtitle">Welcome, {{ current_user.name }} — {{ current_user.organization or 'Vendor Portal' }}</p>
+  </div>
+  <a href="{{ url_for('tenders.list_tenders', status='open') }}" class="btn btn-gov-primary">
+    <i class="bi bi-search me-2"></i>Find Tenders
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  {% for val, label, icon, cls in [
+    (stats.total_bids, 'Total Bids', 'bi-collection', 'stat-icon-blue'),
+    (stats.pending_bids, 'Pending Review', 'bi-hourglass', 'stat-icon-orange'),
+    (stats.awarded_bids, 'Contracts Won', 'bi-award', 'stat-icon-green'),
+  ] %}
+  <div class="col-4">
+    <div class="stat-card text-center">
+      <div class="stat-icon {{ cls }} mx-auto mb-2"><i class="bi {{ icon }}"></i></div>
+      <div class="stat-value">{{ val }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <!-- My recent bids -->
+  <div class="col-lg-6">
+    <div class="card-gov">
+      <div class="card-header-gov d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-collection me-2"></i>My Recent Bids</span>
+        <a href="{{ url_for('bids.my_bids') }}" style="font-size:.78rem;color:rgba(255,255,255,.7)">View All</a>
+      </div>
+      <div class="card-gov-body p-0">
+        {% if my_bids %}
+        {% for bid in my_bids %}
+        <div style="padding:.9rem 1rem;border-bottom:1px solid var(--border);
+                    {% if loop.last %}border:none{% endif %}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div style="font-size:.78rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace">
+                {{ bid.tender.tender_number }}
+              </div>
+              <div style="font-weight:600;font-size:.875rem;margin:.1rem 0">
+                <a href="{{ url_for('bids.view', bid_id=bid.id) }}"
+                   style="color:var(--text-primary);text-decoration:none">
+                  {{ bid.tender.title[:50] }}{% if bid.tender.title|length > 50 %}…{% endif %}
+                </a>
+              </div>
+              <div style="font-size:.75rem;color:var(--text-muted)">
+                <i class="bi bi-clock me-1"></i>{{ bid.submitted_at.strftime('%d %b %Y') }}
+                &nbsp;
+                <span class="badge-encrypted">🔒 Encrypted</span>
+              </div>
+            </div>
+            <span class="status-badge status-{{ bid.status.value }}">
+              {{ bid.status.value|replace('_',' ')|title }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-inbox d-block fs-2 mb-2 opacity-25"></i>
+          <p style="font-size:.875rem">No bids submitted yet.</p>
+          <a href="{{ url_for('tenders.list_tenders', status='open') }}" class="btn btn-gov-primary btn-sm">
+            Browse Open Tenders
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Open tenders to bid -->
+  <div class="col-lg-6">
+    <div class="card-gov">
+      <div class="card-header-gov"><i class="bi bi-clock me-2"></i>Open Tenders</div>
+      <div class="card-gov-body p-0">
+        {% for t in open_tenders %}
+        <div style="padding:.9rem 1rem;border-bottom:1px solid var(--border)">
+          <div class="d-flex justify-content-between align-items-start">
+            <div style="flex:1;min-width:0;margin-right:.8rem">
+              <div style="font-size:.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace">{{ t.tender_number }}</div>
+              <a href="{{ url_for('tenders.detail', tender_id=t.id) }}"
+                 style="font-weight:600;font-size:.875rem;color:var(--text-primary);text-decoration:none">
+                {{ t.title[:55] }}{% if t.title|length > 55 %}…{% endif %}
+              </a>
+              <div style="font-size:.78rem;color:var(--success);font-weight:600;margin-top:.1rem">
+                ₹{{ "{:,.0f}".format(t.estimated_budget) }}
+              </div>
+            </div>
+            <div class="text-end flex-shrink-0">
+              {% if t.days_remaining <= 3 %}
+              <span class="deadline-badge deadline-urgent">{{ t.days_remaining }}d left</span>
+              {% else %}
+              <span class="deadline-badge deadline-normal">{{ t.days_remaining }}d left</span>
+              {% endif %}
+              <div class="mt-1">
+                <a href="{{ url_for('bids.submit', tender_id=t.id) }}"
+                   class="btn btn-gov-primary btn-sm" style="font-size:.72rem;padding:.2rem .55rem">
+                  <i class="bi bi-send me-1"></i>Bid
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted" style="font-size:.875rem">No open tenders right now.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

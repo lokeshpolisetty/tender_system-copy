@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Auditor Dashboard{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar d-none d-lg-flex flex-column">
+  <div style="padding:.5rem .5rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem">
+    <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Signed in as</div>
+    <div style="font-weight:700;color:#fff">{{ current_user.name }}</div>
+    <span class="badge-role badge-auditor">Auditor</span>
+  </div>
+  <div class="sidebar-heading">Oversight</div>
+  <a class="nav-link active" href="{{ url_for('main.dashboard') }}">
+    <i class="bi bi-speedometer2"></i>Dashboard</a>
+  <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+    <i class="bi bi-bar-chart-line"></i>Analytics</a>
+  <a class="nav-link" href="{{ url_for('analytics.audit_log') }}">
+    <i class="bi bi-journal-text"></i>Audit Trail</a>
+  <a class="nav-link" href="{{ url_for('analytics.fraud_detection') }}">
+    <i class="bi bi-shield-exclamation"></i>Fraud Detection</a>
+  <div class="sidebar-heading">Tenders</div>
+  <a class="nav-link" href="{{ url_for('tenders.list_tenders') }}">
+    <i class="bi bi-file-earmark-text"></i>All Tenders</a>
+  <div class="sidebar-heading">Account</div>
+  <a class="nav-link" href="{{ url_for('auth.profile') }}">
+    <i class="bi bi-person-gear"></i>Profile</a>
+  <form method="POST" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="nav-link w-100 text-start border-0 bg-transparent" style="color:rgba(255,100,100,.8)">
+      <i class="bi bi-box-arrow-right"></i>Logout</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-eye me-2"></i>Vigilance Dashboard</h1>
+    <p class="page-subtitle">Procurement oversight and integrity monitoring</p>
+  </div>
+</div>
+
+<!-- Overview KPIs -->
+<div class="row g-3 mb-4">
+  {% for val, label, icon, cls in [
+    (overview.total_tenders, 'Total Tenders', 'bi-file-earmark-text', 'stat-icon-blue'),
+    (overview.active_tenders, 'Active', 'bi-clock', 'stat-icon-green'),
+    (overview.awarded_tenders, 'Awarded', 'bi-award', 'stat-icon-purple'),
+    (overview.total_bids, 'Total Bids', 'bi-collection', 'stat-icon-orange'),
+  ] %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon {{ cls }} mb-2"><i class="bi {{ icon }}"></i></div>
+      <div class="stat-value">{{ val }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <!-- Fraud alerts -->
+  <div class="col-lg-7">
+    <div class="card-gov">
+      <div class="card-header-gov d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-shield-exclamation me-2"></i>Active Alerts</span>
+        {% if fraud_alerts %}
+        <span class="badge bg-danger">{{ fraud_alerts|length }}</span>
+        {% else %}
+        <span style="font-size:.75rem;color:rgba(255,255,255,.6)">All Clear</span>
+        {% endif %}
+      </div>
+      <div class="card-gov-body">
+        {% if fraud_alerts %}
+          {% for alert in fraud_alerts %}
+          <div class="fraud-card fraud-alert-{{ alert.severity }} mb-2 p-3"
+               style="border-radius:10px;background:#fff;border:1px solid var(--border)">
+            <div class="d-flex align-items-start gap-2">
+              <i class="bi bi-{% if alert.severity=='high' %}exclamation-octagon-fill{% else %}exclamation-triangle-fill{% endif %}"
+                 style="color:{% if alert.severity=='high' %}#c62828{% elif alert.severity=='medium' %}#e65100{% else %}#137333{% endif %};margin-top:2px"></i>
+              <div>
+                <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:.2rem">
+                  {{ alert.type|replace('_',' ')|upper }} — {{ alert.severity|upper }}
+                </div>
+                <div style="font-size:.85rem;color:var(--text-secondary)">{{ alert.message }}</div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          <div class="mt-2">
+            <a href="{{ url_for('analytics.fraud_detection') }}" class="btn btn-gov-outline w-100 btn-sm">
+              Full Fraud Report <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+        {% else %}
+        <div class="text-center py-3">
+          <i class="bi bi-shield-check fs-2 d-block mb-2" style="color:#137333"></i>
+          <div style="font-weight:600;color:#137333">No anomalies detected</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent audit entries -->
+  <div class="col-lg-5">
+    <div class="card-gov">
+      <div class="card-header-gov d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-text me-2"></i>Recent Audit Entries</span>
+        <a href="{{ url_for('analytics.audit_log') }}"
+           style="font-size:.75rem;color:rgba(255,255,255,.6)">View All</a>
+      </div>
+      <div class="card-gov-body p-0">
+        {% for log in recent_logs %}
+        <div style="padding:.7rem 1rem;border-bottom:1px solid var(--border);
+                    {% if loop.last %}border:none{% endif %}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span style="font-size:.7rem;font-weight:700;padding:.15rem .45rem;border-radius:10px;
+                            background:#f0f4ff;color:var(--primary)">
+                {{ log.action.value|replace('_',' ')|upper }}
+              </span>
+              <div style="font-size:.78rem;color:var(--text-secondary);margin-top:.2rem">
+                {{ log.description[:55] if log.description else '—' }}{% if log.description and log.description|length > 55 %}…{% endif %}
+              </div>
+            </div>
+            <div style="font-size:.7rem;color:var(--text-muted);white-space:nowrap;margin-left:.5rem">
+              {{ log.timestamp.strftime('%H:%M') }}<br>{{ log.timestamp.strftime('%d %b') }}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center py-3 text-muted" style="font-size:.875rem">No audit entries yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

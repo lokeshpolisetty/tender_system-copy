@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}My Bids{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-collection me-2"></i>My Bids</h1>
+    <p class="page-subtitle">All bids you have submitted across tenders</p>
+  </div>
+  <a href="{{ url_for('tenders.list_tenders', status='open') }}" class="btn btn-gov-primary">
+    <i class="bi bi-search me-2"></i>Find Open Tenders
+  </a>
+</div>
+
+{% if bids %}
+<div class="card-gov">
+  <div class="card-gov-body p-0">
+    <div class="table-responsive">
+      <table class="table table-gov mb-0">
+        <thead>
+          <tr>
+            <th>Tender</th>
+            <th>Department</th>
+            <th>Submitted</th>
+            <th>Amount</th>
+            <th>Rank</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bid in bids %}
+          <tr>
+            <td>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-muted)">{{ bid.tender.tender_number }}</div>
+              <a href="{{ url_for('tenders.detail', tender_id=bid.tender_id) }}"
+                 style="font-weight:600;font-size:.875rem;color:var(--text-primary);text-decoration:none">
+                {{ bid.tender.title[:50] }}{% if bid.tender.title|length > 50 %}…{% endif %}
+              </a>
+            </td>
+            <td style="font-size:.82rem;color:var(--text-secondary)">{{ bid.tender.department or '—' }}</td>
+            <td style="font-size:.78rem;color:var(--text-secondary);white-space:nowrap">
+              {{ bid.submitted_at.strftime('%d %b %Y') }}<br>
+              {{ bid.submitted_at.strftime('%H:%M') }}
+            </td>
+            <td>
+              {% if bid.is_revealed and bid.bid_amount %}
+              <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-primary)">
+                ₹{{ "{:,.0f}".format(bid.bid_amount) }}
+              </div>
+              {% else %}
+              <span class="badge-encrypted">🔒 Sealed</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if bid.rank %}
+              <div style="width:32px;height:32px;border-radius:50%;
+                          background:{% if bid.is_l1 %}var(--accent){% elif bid.rank == 2 %}#e0e0e0{% else %}#f5f5f5{% endif %};
+                          display:inline-flex;align-items:center;justify-content:center;
+                          font-weight:700;font-size:.85rem;
+                          color:{% if bid.is_l1 %}var(--primary){% else %}var(--text-secondary){% endif %}">
+                {% if bid.is_l1 %}L1{% else %}{{ bid.rank }}{% endif %}
+              </div>
+              {% else %}
+              <span style="color:var(--text-muted);font-size:.82rem">Pending</span>
+              {% endif %}
+            </td>
+            <td><span class="status-badge status-{{ bid.status.value }}">{{ bid.status.value|replace('_',' ')|title }}</span></td>
+            <td>
+              <a href="{{ url_for('bids.view', bid_id=bid.id) }}"
+                 class="btn btn-gov-outline btn-sm" style="font-size:.75rem;padding:.2rem .6rem">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination pagination-gov justify-content-center">
+    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('bids.my_bids', page=pagination.prev_num) }}"><i class="bi bi-chevron-left"></i></a>
+    </li>
+    {% for p in pagination.iter_pages() %}
+      {% if p %}
+      <li class="page-item {% if p == pagination.page %}active{% endif %}">
+        <a class="page-link" href="{{ url_for('bids.my_bids', page=p) }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('bids.my_bids', page=pagination.next_num) }}"><i class="bi bi-chevron-right"></i></a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+  <h5 style="color:var(--text-secondary)">No bids submitted yet</h5>
+  <p style="color:var(--text-muted);font-size:.875rem">Browse open tenders and submit your first bid.</p>
+  <a href="{{ url_for('tenders.list_tenders', status='open') }}" class="btn btn-gov-primary">
+    <i class="bi bi-search me-2"></i>Browse Tenders
+  </a>
+</div>
+{% endif %}
+{% endblock %}

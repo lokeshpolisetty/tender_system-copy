@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Edit Tender — {{ tender.tender_number }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb breadcrumb-gov">
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.list_tenders') }}">Tenders</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.detail', tender_id=tender.id) }}">{{ tender.tender_number }}</a></li>
+    <li class="breadcrumb-item active">Edit</li>
+  </ol>
+</nav>
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-pencil me-2"></i>Edit Tender</h1>
+    <p class="page-subtitle">{{ tender.tender_number }} — Only draft tenders can be edited</p>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('tenders.edit', tender_id=tender.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-info-circle me-2"></i>Basic Information</div>
+        <div class="card-gov-body">
+          <div class="mb-3">
+            <label class="form-label-gov">Tender Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control form-control-gov" value="{{ tender.title }}" required>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-gov">Category</label>
+              <select name="category" class="form-select form-control-gov">
+                {% for cat in ['Works','Goods','Services','Consultancy','IT & Software','Infrastructure','Healthcare','Education'] %}
+                <option value="{{ cat }}" {% if tender.category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-gov">Department</label>
+              <input type="text" name="department" class="form-control form-control-gov" value="{{ tender.department or '' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-gov">Location</label>
+            <input type="text" name="location" class="form-control form-control-gov" value="{{ tender.location or '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label-gov">Description <span class="text-danger">*</span></label>
+            <textarea name="description" class="form-control form-control-gov" rows="5" required>{{ tender.description }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-currency-rupee me-2"></i>Financial</div>
+        <div class="card-gov-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label-gov">Estimated Budget (₹)</label>
+              <input type="number" name="estimated_budget" class="form-control form-control-gov"
+                     value="{{ tender.estimated_budget|int }}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label-gov">EMD Amount (₹)</label>
+              <input type="number" name="emd_amount" class="form-control form-control-gov"
+                     value="{{ tender.emd_amount|int if tender.emd_amount else 0 }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label-gov">Evaluation Method</label>
+              <select name="evaluation_method" class="form-select form-control-gov">
+                <option value="L1" {% if tender.evaluation_method == 'L1' %}selected{% endif %}>L1</option>
+                <option value="QCBS" {% if tender.evaluation_method == 'QCBS' %}selected{% endif %}>QCBS</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-calendar3 me-2"></i>Dates</div>
+        <div class="card-gov-body">
+          <div class="row g-3">
+            {% for fname, label, dt in [
+              ('bid_start_date','Bid Start Date', tender.bid_start_date),
+              ('bid_end_date','Submission Deadline', tender.bid_end_date),
+              ('opening_date','Opening Date', tender.opening_date),
+            ] %}
+            <div class="col-md-4">
+              <label class="form-label-gov">{{ label }}</label>
+              <input type="datetime-local" name="{{ fname }}" class="form-control form-control-gov"
+                     value="{{ dt.strftime('%Y-%m-%dT%H:%M') if dt else '' }}">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card-gov mb-4" style="position:sticky;top:1rem">
+        <div class="card-header-gov"><i class="bi bi-person-badge me-2"></i>Contact</div>
+        <div class="card-gov-body">
+          <div class="mb-3">
+            <label class="form-label-gov">Contact Name</label>
+            <input type="text" name="contact_name" class="form-control form-control-gov" value="{{ tender.contact_name or '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label-gov">Contact Email</label>
+            <input type="email" name="contact_email" class="form-control form-control-gov" value="{{ tender.contact_email or '' }}">
+          </div>
+          <div class="mb-4">
+            <label class="form-label-gov">Contact Phone</label>
+            <input type="tel" name="contact_phone" class="form-control form-control-gov" value="{{ tender.contact_phone or '' }}">
+          </div>
+          <button type="submit" class="btn btn-gov-primary w-100">
+            <i class="bi bi-save me-2"></i>Save Changes
+          </button>
+          <a href="{{ url_for('tenders.detail', tender_id=tender.id) }}"
+             class="btn btn-gov-outline w-100 mt-2">Cancel</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

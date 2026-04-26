@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto">
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-person-gear me-2"></i>My Profile</h1>
+    <p class="page-subtitle">Manage your account information and digital signature</p>
+  </div>
+</div>
+
+<div class="card-gov">
+  <div class="card-header-gov"><i class="bi bi-pencil me-2"></i>Edit Profile</div>
+  <div class="card-gov-body">
+    <!-- Role & status banner -->
+    <div class="mb-4 p-3 d-flex align-items-center gap-3"
+         style="background:#f0f4ff;border-radius:10px;border:1px solid var(--border)">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);
+                  display:flex;align-items:center;justify-content:center;
+                  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.4rem;color:var(--accent)">
+        {{ current_user.name[0].upper() }}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:1rem">{{ current_user.name }}</div>
+        <div style="font-size:.8rem;color:var(--text-secondary)">{{ current_user.email }}</div>
+        <div class="mt-1">
+          <span class="badge-role badge-{{ current_user.role.value }}">{{ current_user.role.value|title }}</span>
+          {% if current_user.email_verified %}
+          <span style="font-size:.72rem;background:#e6f4ea;color:#137333;padding:.15rem .5rem;border-radius:20px;margin-left:.3rem">
+            <i class="bi bi-check-circle me-1"></i>Email Verified
+          </span>
+          {% endif %}
+          {% if current_user.signature_verified %}
+          <span style="font-size:.72rem;background:#e8f0fe;color:#1565c0;padding:.15rem .5rem;border-radius:20px;margin-left:.3rem">
+            <i class="bi bi-pen me-1"></i>Signature on file
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="ms-auto text-end" style="font-size:.78rem;color:var(--text-muted)">
+        <div>Member since {{ current_user.created_at.strftime('%b %Y') }}</div>
+        {% if current_user.last_login %}
+        <div>Last login {{ current_user.last_login.strftime('%d %b %Y') }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-gov">Full Name</label>
+          {{ form.name(class="form-control form-control-gov") }}
+          {% for e in form.name.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-gov">Organization</label>
+          {{ form.organization(class="form-control form-control-gov") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-gov">Phone Number</label>
+          {{ form.phone(class="form-control form-control-gov") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-gov">GST Number</label>
+          {{ form.gst_number(class="form-control form-control-gov", style="font-family:'JetBrains Mono',monospace") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-gov">PAN Number</label>
+          {{ form.pan_number(class="form-control form-control-gov", style="font-family:'JetBrains Mono',monospace") }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-gov">Address</label>
+          {{ form.address(class="form-control form-control-gov", rows=2) }}
+        </div>
+        <div class="col-12">
+          <label class="form-label-gov">Update Digital Signature</label>
+          {{ form.digital_signature(class="form-control form-control-gov") }}
+          {% if current_user.digital_signature %}
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem">
+            <i class="bi bi-check-circle text-success me-1"></i>Signature on file. Upload a new file to replace.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <hr style="border-color:var(--border);margin:1.5rem 0">
+      <button type="submit" class="btn btn-gov-primary px-4">
+        <i class="bi bi-save me-2"></i>Save Changes
+      </button>
+    </form>
+  </div>
+</div>
+</div>
+{% endblock %}

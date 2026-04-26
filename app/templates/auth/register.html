@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="py-5" style="background:linear-gradient(135deg,#f0f4ff 0%,#e8ecf8 100%);min-height:calc(100vh - 65px)">
+  <div class="container" style="max-width:640px">
+
+    <div class="text-center mb-4">
+      <h2 style="font-family:'Rajdhani',sans-serif;font-size:1.8rem;font-weight:700;color:var(--primary)">
+        Create Your Account
+      </h2>
+      <p style="font-size:.875rem;color:var(--text-secondary)">
+        Join the Government e-Procurement Portal
+      </p>
+    </div>
+
+    <div class="card-gov">
+      <div class="card-header-gov">
+        <i class="bi bi-person-plus me-2"></i>Registration Form
+      </div>
+      <div class="card-gov-body">
+        <form method="POST" action="{{ url_for('auth.register') }}"
+              enctype="multipart/form-data" novalidate>
+          {{ form.hidden_tag() }}
+
+          <!-- Role selection (prominent) -->
+          <div class="mb-4">
+            <label class="form-label-gov">Register As <span class="text-danger">*</span></label>
+            <div class="row g-3">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="role" id="role_vendor"
+                       value="vendor" {% if not form.role.data or form.role.data == 'vendor' %}checked{% endif %} />
+                <label class="btn w-100 py-3 text-start" for="role_vendor"
+                       style="border:2px solid var(--border);border-radius:10px;font-size:.875rem;
+                              background:#fff;transition:all .15s"
+                       onclick="this.style.borderColor='var(--primary)';this.style.background='#f0f4ff'"
+                       id="label_vendor">
+                  <i class="bi bi-building me-2" style="color:var(--primary)"></i>
+                  <strong>Vendor / Bidder</strong><br>
+                  <span class="text-muted" style="font-size:.75rem">Submit bids on tenders</span>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="role" id="role_auditor"
+                       value="auditor" {% if form.role.data == 'auditor' %}checked{% endif %} />
+                <label class="btn w-100 py-3 text-start" for="role_auditor"
+                       style="border:2px solid var(--border);border-radius:10px;font-size:.875rem;
+                              background:#fff;transition:all .15s"
+                       id="label_auditor">
+                  <i class="bi bi-eye me-2" style="color:var(--primary)"></i>
+                  <strong>Auditor</strong><br>
+                  <span class="text-muted" style="font-size:.75rem">Vigilance officer</span>
+                </label>
+              </div>
+            </div>
+            {% for error in form.role.errors %}
+            <div class="text-danger mt-1" style="font-size:.8rem">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-3">
+            <!-- Full Name -->
+            <div class="col-12">
+              <label class="form-label-gov">Full Name <span class="text-danger">*</span></label>
+              {{ form.name(class="form-control form-control-gov",placeholder="As on official documents") }}
+              {% for e in form.name.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Email -->
+            <div class="col-md-6">
+              <label class="form-label-gov">Email Address <span class="text-danger">*</span></label>
+              {{ form.email(class="form-control form-control-gov",placeholder="you@company.com") }}
+              {% for e in form.email.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Phone -->
+            <div class="col-md-6">
+              <label class="form-label-gov">Phone Number</label>
+              {{ form.phone(class="form-control form-control-gov",placeholder="+91 98765 43210") }}
+            </div>
+
+            <!-- Organization -->
+            <div class="col-12">
+              <label class="form-label-gov">Organization / Company Name <span class="text-danger">*</span></label>
+              {{ form.organization(class="form-control form-control-gov",placeholder="ABC Constructions Pvt. Ltd.") }}
+              {% for e in form.organization.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- GST -->
+            <div class="col-md-6">
+              <label class="form-label-gov">GST Number</label>
+              {{ form.gst_number(class="form-control form-control-gov",placeholder="27AABCU9603R1ZX",
+                                 style="font-family:'JetBrains Mono',monospace") }}
+            </div>
+
+            <!-- Address -->
+            <div class="col-md-6">
+              <label class="form-label-gov">Address</label>
+              {{ form.address(class="form-control form-control-gov",placeholder="City, State",rows=1) }}
+            </div>
+
+            <!-- Password -->
+            <div class="col-md-6">
+              <label class="form-label-gov">Password <span class="text-danger">*</span></label>
+              <div class="input-group">
+                {{ form.password(class="form-control form-control-gov",placeholder="Min 8 chars",
+                                id="regPwd") }}
+                <button class="btn btn-outline-secondary" type="button"
+                        onclick="togglePwd('regPwd',this)"
+                        style="border-color:var(--border);border-left:none">
+                  <i class="bi bi-eye"></i></button>
+              </div>
+              {% for e in form.password.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="col-md-6">
+              <label class="form-label-gov">Confirm Password <span class="text-danger">*</span></label>
+              <div class="input-group">
+                {{ form.confirm_password(class="form-control form-control-gov",placeholder="Repeat password",
+                                        id="regPwd2") }}
+                <button class="btn btn-outline-secondary" type="button"
+                        onclick="togglePwd('regPwd2',this)"
+                        style="border-color:var(--border);border-left:none">
+                  <i class="bi bi-eye"></i></button>
+              </div>
+              {% for e in form.confirm_password.errors %}<div class="text-danger mt-1" style="font-size:.8rem">{{ e }}</div>{% endfor %}
+            </div>
+
+            <!-- Digital Signature -->
+            <div class="col-12">
+              <label class="form-label-gov">Digital Signature (Optional)</label>
+              <div style="border:2px dashed var(--border);border-radius:10px;padding:1.2rem;
+                          text-align:center;background:#fafbff;cursor:pointer"
+                   onclick="document.getElementById('sigFile').click()">
+                <i class="bi bi-pen fs-3 d-block mb-1" style="color:var(--text-muted)"></i>
+                <div style="font-size:.82rem;color:var(--text-secondary)">
+                  Click to upload your digital signature (PNG/JPG/PDF)
+                </div>
+                {{ form.digital_signature(class="d-none",id="sigFile",
+                                         onchange="showFilename(this,'sigName')") }}
+                <div id="sigName" class="mt-2" style="font-size:.8rem;color:var(--primary-light)"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password strength -->
+          <div class="mt-3 mb-3">
+            <div id="pwdStrength" style="height:4px;border-radius:2px;background:var(--border);overflow:hidden">
+              <div id="pwdBar" style="height:100%;width:0;transition:width .3s,background .3s"></div>
+            </div>
+            <div id="pwdHint" style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem"></div>
+          </div>
+
+          <button type="submit" class="btn btn-gov-primary w-100 py-2" style="font-size:1rem;margin-top:.5rem">
+            <i class="bi bi-person-check me-2"></i>Create Account
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <p class="text-center mt-3" style="font-size:.875rem;color:var(--text-secondary)">
+      Already have an account?
+      <a href="{{ url_for('auth.login') }}" style="color:var(--primary-light);font-weight:600;text-decoration:none">Sign in</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePwd(id,btn){
+  const i=document.getElementById(id),icon=btn.querySelector('i');
+  i.type=i.type==='password'?'text':'password';
+  icon.className=i.type==='text'?'bi bi-eye-slash':'bi bi-eye';
+}
+function showFilename(inp,targetId){
+  const el=document.getElementById(targetId);
+  el.textContent=inp.files[0]?'Selected: '+inp.files[0].name:'';
+}
+// Password strength meter
+document.getElementById('regPwd').addEventListener('input',function(){
+  const v=this.value,bar=document.getElementById('pwdBar'),hint=document.getElementById('pwdHint');
+  let s=0,msg='';
+  if(v.length>=8)s++;if(v.length>=12)s++;
+  if(/[A-Z]/.test(v))s++;if(/[0-9]/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
+  const colors=['#c0392b','#e67e22','#f1c40f','#27ae60','#1abc9c'];
+  const labels=['Very Weak','Weak','Fair','Strong','Very Strong'];
+  bar.style.width=(s*20)+'%'; bar.style.background=colors[s-1]||'#e0e0e0';
+  hint.textContent=v.length?labels[s-1]||'':'';
+});
+// Role card highlight
+document.querySelectorAll('.btn-check').forEach(r=>{
+  r.addEventListener('change',()=>{
+    document.querySelectorAll('[id^="label_"]').forEach(l=>{
+      l.style.borderColor='var(--border)';l.style.background='#fff';
+    });
+    const lbl=document.getElementById('label_'+r.value);
+    if(lbl){lbl.style.borderColor='var(--primary)';lbl.style.background='#f0f4ff';}
+  });
+});
+// Init on load
+document.querySelectorAll('.btn-check:checked').forEach(r=>{
+  const lbl=document.getElementById('label_'+r.value);
+  if(lbl){lbl.style.borderColor='var(--primary)';lbl.style.background='#f0f4ff';}
+});
+</script>
+{% endblock %}

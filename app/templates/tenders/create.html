@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Create Tender{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb breadcrumb-gov">
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.list_tenders') }}">Tenders</a></li>
+    <li class="breadcrumb-item active">Create Tender</li>
+  </ol>
+</nav>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-plus-circle me-2"></i>Create New Tender</h1>
+    <p class="page-subtitle">Publish a new government procurement notice</p>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('tenders.create') }}" enctype="multipart/form-data" id="tenderForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row g-4">
+    <!-- Left column -->
+    <div class="col-lg-8">
+
+      <!-- Basic Info -->
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-info-circle me-2"></i>Basic Information</div>
+        <div class="card-gov-body">
+          <div class="mb-3">
+            <label class="form-label-gov">Tender Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control form-control-gov"
+                   placeholder="e.g. Construction of Government Office Building, Phase II" required maxlength="300">
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-gov">Category</label>
+              <select name="category" class="form-select form-control-gov">
+                <option value="">Select Category</option>
+                {% for cat in ['Works','Goods','Services','Consultancy','IT & Software','Infrastructure','Healthcare','Education'] %}
+                <option value="{{ cat }}">{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-gov">Department / Ministry</label>
+              <input type="text" name="department" class="form-control form-control-gov"
+                     placeholder="e.g. Ministry of Road Transport">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-gov">Location</label>
+            <input type="text" name="location" class="form-control form-control-gov"
+                   placeholder="e.g. Mumbai, Maharashtra">
+          </div>
+          <div class="mb-3">
+            <label class="form-label-gov">Tender Description <span class="text-danger">*</span></label>
+            <textarea name="description" class="form-control form-control-gov" rows="5" required
+                      placeholder="Provide detailed scope of work, technical specifications, and project objectives…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial -->
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-currency-rupee me-2"></i>Financial Details</div>
+        <div class="card-gov-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label-gov">Estimated Budget (₹) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:#f0f4ff;border-color:var(--border);font-weight:700">₹</span>
+                <input type="number" name="estimated_budget" class="form-control form-control-gov"
+                       style="border-left:none" placeholder="0" min="1" step="1" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label-gov">EMD Amount (₹)</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:#f0f4ff;border-color:var(--border);font-weight:700">₹</span>
+                <input type="number" name="emd_amount" class="form-control form-control-gov"
+                       style="border-left:none" placeholder="0" min="0" step="1">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label-gov">Tender Fee (₹)</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:#f0f4ff;border-color:var(--border);font-weight:700">₹</span>
+                <input type="number" name="tender_fee" class="form-control form-control-gov"
+                       style="border-left:none" placeholder="0" min="0" step="1">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-gov">Evaluation Method</label>
+              <select name="evaluation_method" class="form-select form-control-gov">
+                <option value="L1" selected>L1 — Lowest Bidder</option>
+                <option value="QCBS">QCBS — Quality & Cost Based</option>
+                <option value="QBS">QBS — Quality Based</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dates -->
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-calendar3 me-2"></i>Important Dates</div>
+        <div class="card-gov-body">
+          <div class="row g-3">
+            {% for name, label, required in [
+              ('bid_start_date','Bid Start Date & Time', True),
+              ('bid_end_date','Bid Submission Deadline', True),
+              ('opening_date','Bid Opening Date', False),
+              ('pre_bid_meeting','Pre-Bid Meeting (optional)', False),
+            ] %}
+            <div class="col-md-6">
+              <label class="form-label-gov">{{ label }} {% if required %}<span class="text-danger">*</span>{% endif %}</label>
+              <input type="datetime-local" name="{{ name }}" class="form-control form-control-gov"
+                     {% if required %}required{% endif %}>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Eligibility -->
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-check-circle me-2"></i>Eligibility Criteria</div>
+        <div class="card-gov-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-gov">Minimum Experience (years)</label>
+              <input type="text" name="min_experience" class="form-control form-control-gov" placeholder="e.g. 5 years">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-gov">Minimum Annual Turnover (₹)</label>
+              <input type="text" name="min_turnover" class="form-control form-control-gov" placeholder="e.g. ₹50 Lakhs">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-gov">Required Certifications</label>
+              <input type="text" name="certifications" class="form-control form-control-gov" placeholder="e.g. ISO 9001:2015">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-gov">Other Criteria</label>
+              <input type="text" name="other_criteria" class="form-control form-control-gov" placeholder="Any additional requirements">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="card-gov mb-4">
+        <div class="card-header-gov"><i class="bi bi-paperclip me-2"></i>Attach Tender Documents</div>
+        <div class="card-gov-body">
+          <div style="border:2px dashed var(--border);border-radius:10px;padding:2rem;
+                      text-align:center;background:#fafbff;cursor:pointer"
+               onclick="document.getElementById('tenderDocs').click()">
+            <i class="bi bi-cloud-upload fs-2 d-block mb-2" style="color:var(--primary-light)"></i>
+            <div style="font-weight:600;color:var(--text-secondary)">Upload Tender Documents</div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem">PDF or DOCX files — NIT, BOQ, Drawings, etc.</div>
+            <input type="file" name="documents" id="tenderDocs" class="d-none" multiple
+                   accept=".pdf,.docx" onchange="showFiles(this)">
+          </div>
+          <div id="docList" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: contact + submit -->
+    <div class="col-lg-4">
+      <div class="card-gov mb-4" style="position:sticky;top:1rem">
+        <div class="card-header-gov"><i class="bi bi-person-badge me-2"></i>Contact Officer</div>
+        <div class="card-gov-body">
+          <div class="mb-3">
+            <label class="form-label-gov">Contact Name</label>
+            <input type="text" name="contact_name" class="form-control form-control-gov">
+          </div>
+          <div class="mb-3">
+            <label class="form-label-gov">Contact Email</label>
+            <input type="email" name="contact_email" class="form-control form-control-gov">
+          </div>
+          <div class="mb-4">
+            <label class="form-label-gov">Contact Phone</label>
+            <input type="tel" name="contact_phone" class="form-control form-control-gov">
+          </div>
+          <hr style="border-color:var(--border)">
+          <div class="d-flex flex-column gap-2">
+            <button type="submit" class="btn btn-gov-primary py-2" style="font-size:1rem">
+              <i class="bi bi-save me-2"></i>Save as Draft
+            </button>
+            <p style="font-size:.75rem;text-align:center;color:var(--text-muted);margin:0">
+              Draft tenders must be published separately before vendors can see them.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showFiles(input) {
+  const list = document.getElementById('docList');
+  list.innerHTML = '';
+  Array.from(input.files).forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.4rem .7rem;' +
+      'background:#f0f4ff;border-radius:6px;margin-bottom:.3rem;font-size:.8rem';
+    div.innerHTML = `<i class="bi bi-file-earmark-${f.name.endsWith('.pdf') ? 'pdf" style="color:#c62828' : 'word" style="color:#1565c0'}"></i>
+      <span style="font-weight:500">${f.name}</span>
+      <span class="text-muted ms-auto">${(f.size/1024).toFixed(0)} KB</span>`;
+    list.appendChild(div);
+  });
+}
+
+// Auto-set opening date = end date + 1 day
+document.querySelector('[name=bid_end_date]').addEventListener('change', function() {
+  const endDate = new Date(this.value);
+  if (endDate && !document.querySelector('[name=opening_date]').value) {
+    endDate.setDate(endDate.getDate() + 1);
+    const iso = endDate.toISOString().slice(0,16);
+    document.querySelector('[name=opening_date]').value = iso;
+  }
+});
+</script>
+{% endblock %}

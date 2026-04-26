@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Submit Bid — {{ tender.tender_number }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb breadcrumb-gov">
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.list_tenders') }}">Tenders</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.detail', tender_id=tender.id) }}">{{ tender.tender_number }}</a></li>
+    <li class="breadcrumb-item active">Submit Bid</li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card-gov">
+      <div class="card-header-gov">
+        <i class="bi bi-send me-2"></i>Submit Bid — {{ tender.title }}
+      </div>
+      <div class="card-gov-body">
+
+        <!-- Encryption notice -->
+        <div class="mb-4 p-3" style="background:linear-gradient(135deg,#1a2035,#0d3b6e);
+                                       border-radius:12px;color:#fff">
+          <div style="display:flex;align-items:center;gap:.8rem">
+            <div style="font-size:1.8rem">🔒</div>
+            <div>
+              <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1rem">
+                Your Bid is Encrypted
+              </div>
+              <div style="font-size:.8rem;color:rgba(255,255,255,.75);line-height:1.5">
+                Your bid amount is encrypted using AES-256 and sealed until the official opening date.
+                No one — not even administrators — can read it before that time.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('bids.submit', tender_id=tender.id) }}"
+              enctype="multipart/form-data" id="bidForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <!-- Bid Amount -->
+          <div class="mb-4">
+            <label class="form-label-gov">
+              Bid Amount (₹) <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text" style="background:#f0f4ff;border-color:var(--border);
+                                                     font-weight:700;color:var(--primary)">₹</span>
+              <input type="number" name="bid_amount" class="form-control form-control-gov"
+                     style="border-left:none;font-family:'JetBrains Mono',monospace;font-size:1.1rem"
+                     placeholder="0.00" min="1" step="0.01" required
+                     id="bidAmount" onchange="updateBudgetComparison(this.value)">
+            </div>
+            <div id="budgetHint" class="mt-1" style="font-size:.8rem;color:var(--text-secondary)">
+              Estimated budget: <strong>₹{{ "{:,.0f}".format(tender.estimated_budget) }}</strong>
+            </div>
+          </div>
+
+          <!-- Cover Letter -->
+          <div class="mb-4">
+            <label class="form-label-gov">Cover Letter / Technical Proposal Summary</label>
+            <textarea name="cover_letter" class="form-control form-control-gov" rows="5"
+                      placeholder="Briefly describe your organisation's qualifications, approach, and why your bid should be considered…"></textarea>
+          </div>
+
+          <!-- Document Upload -->
+          <div class="mb-4">
+            <label class="form-label-gov">Supporting Documents (PDF / DOCX)</label>
+            <div id="dropZone"
+                 style="border:2px dashed var(--border);border-radius:12px;padding:2rem;
+                         text-align:center;background:#fafbff;cursor:pointer;transition:all .2s"
+                 onclick="document.getElementById('bidDocs').click()"
+                 ondragover="this.style.borderColor='var(--primary)';event.preventDefault()"
+                 ondragleave="this.style.borderColor='var(--border)'"
+                 ondrop="handleDrop(event)">
+              <i class="bi bi-cloud-upload fs-2 d-block mb-2" style="color:var(--primary-light)"></i>
+              <div style="font-weight:600;color:var(--text-secondary)">
+                Drag & drop or click to upload
+              </div>
+              <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem">
+                PDF or DOCX — Technical proposal, financial bid, certificates, etc.
+              </div>
+              <input type="file" name="documents" id="bidDocs" class="d-none"
+                     multiple accept=".pdf,.docx"
+                     onchange="showSelectedFiles(this)">
+            </div>
+            <div id="fileList" class="mt-2"></div>
+          </div>
+
+          <!-- Declarations -->
+          <div class="mb-4 p-3" style="background:#f8faff;border-radius:10px;border:1px solid var(--border)">
+            <div class="section-heading" style="font-size:.85rem;margin-bottom:.8rem">
+              Declarations
+            </div>
+            {% for decl in [
+              ('decl1', 'I confirm that all information provided is accurate and complete.'),
+              ('decl2', 'I have read and understood the tender terms and eligibility criteria.'),
+              ('decl3', 'My bid is valid for a minimum of 180 days from the submission date.'),
+              ('decl4', 'I am not currently blacklisted or debarred from government contracts.'),
+            ] %}
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="{{ decl[0] }}" required>
+              <label class="form-check-label" for="{{ decl[0] }}"
+                     style="font-size:.82rem;color:var(--text-secondary)">
+                {{ decl[1] }}
+              </label>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex gap-3">
+            <button type="submit" class="btn btn-gov-primary flex-fill py-2" style="font-size:1rem"
+                    id="submitBtn">
+              <i class="bi bi-send me-2"></i>Submit Encrypted Bid
+            </button>
+            <a href="{{ url_for('tenders.detail', tender_id=tender.id) }}"
+               class="btn btn-gov-outline px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right sidebar: tender summary -->
+  <div class="col-lg-4">
+    <div class="card-gov" style="position:sticky;top:1rem">
+      <div class="card-header-gov"><i class="bi bi-info-circle me-2"></i>Tender Summary</div>
+      <div class="card-gov-body">
+        <div class="tender-number mb-1">{{ tender.tender_number }}</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.05rem;
+                     color:var(--text-primary);margin-bottom:1rem">{{ tender.title }}</div>
+        <dl class="row g-0" style="font-size:.82rem">
+          <dt class="col-6 text-muted">Estimated Budget</dt>
+          <dd class="col-6 text-end fw-600">₹{{ "{:,.0f}".format(tender.estimated_budget) }}</dd>
+          <dt class="col-6 text-muted mt-2">EMD Required</dt>
+          <dd class="col-6 text-end mt-2">₹{{ "{:,.0f}".format(tender.emd_amount) if tender.emd_amount else '—' }}</dd>
+          <dt class="col-6 text-muted mt-2">Deadline</dt>
+          <dd class="col-6 text-end mt-2">{{ tender.bid_end_date.strftime('%d %b %Y %H:%M') }}</dd>
+          <dt class="col-6 text-muted mt-2">Days Left</dt>
+          <dd class="col-6 text-end mt-2">
+            <span class="deadline-badge {% if tender.days_remaining <= 3 %}deadline-urgent
+                   {% elif tender.days_remaining <= 7 %}deadline-warning
+                   {% else %}deadline-normal{% endif %}">
+              {{ tender.days_remaining }} days
+            </span>
+          </dd>
+          <dt class="col-6 text-muted mt-2">Evaluation</dt>
+          <dd class="col-6 text-end mt-2">{{ tender.evaluation_method }}</dd>
+        </dl>
+
+        <hr style="border-color:var(--border)">
+        <div style="font-size:.75rem;color:var(--text-muted)">
+          <i class="bi bi-shield-lock me-1"></i>
+          Once submitted, your bid is sealed with Fernet (AES-128-CBC + HMAC) encryption and cannot be accessed until the official bid opening.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateBudgetComparison(val) {
+  const budget = {{ tender.estimated_budget }};
+  const hint = document.getElementById('budgetHint');
+  const amount = parseFloat(val);
+  if (!amount) return;
+  const pct = ((amount / budget) * 100).toFixed(1);
+  let color = '#137333', msg = '';
+  if (amount < budget * 0.5) { color = '#c62828'; msg = ' ⚠️ Unusually low — below 50% of budget'; }
+  else if (amount > budget) { color = '#e65100'; msg = ' ⚠️ Exceeds estimated budget'; }
+  hint.innerHTML = `Estimated budget: <strong>₹${budget.toLocaleString('en-IN')}</strong>
+    &nbsp;→&nbsp; Your bid is <strong style="color:${color}">${pct}% of budget${msg}</strong>`;
+}
+
+function showSelectedFiles(input) {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  Array.from(input.files).forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.4rem .7rem;' +
+      'background:#f0f4ff;border-radius:6px;margin-bottom:.3rem;font-size:.8rem';
+    div.innerHTML = `<i class="bi bi-file-earmark-${f.name.endsWith('.pdf') ? 'pdf" style="color:#c62828' : 'word" style="color:#1565c0'}"></i>
+      <span style="font-weight:500">${f.name}</span>
+      <span class="text-muted ms-auto">${(f.size/1024).toFixed(0)} KB</span>`;
+    list.appendChild(div);
+  });
+  document.getElementById('dropZone').style.borderColor = 'var(--primary)';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const input = document.getElementById('bidDocs');
+  const dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+  input.files = dt.files;
+  showSelectedFiles(input);
+}
+
+// Confirm before submit
+document.getElementById('bidForm').addEventListener('submit', function(e) {
+  const amount = document.getElementById('bidAmount').value;
+  if (!confirm(`Confirm bid submission of ₹${parseFloat(amount).toLocaleString('en-IN')}?\n\nThis cannot be changed after submission.`)) {
+    e.preventDefault(); return;
+  }
+  document.getElementById('submitBtn').innerHTML =
+    '<span class="spinner-border spinner-border-sm me-2"></span>Encrypting & Submitting…';
+  document.getElementById('submitBtn').disabled = true;
+});
+</script>
+{% endblock %}

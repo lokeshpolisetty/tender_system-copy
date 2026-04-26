@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}All Bids — {{ tender.tender_number }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb breadcrumb-gov">
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.list_tenders') }}">Tenders</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.detail', tender_id=tender.id) }}">{{ tender.tender_number }}</a></li>
+    <li class="breadcrumb-item active">All Bids</li>
+  </ol>
+</nav>
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-collection me-2"></i>All Bids</h1>
+    <p class="page-subtitle">{{ tender.title }} · {{ bids|length }} bid{{ 's' if bids|length != 1 }} received</p>
+  </div>
+  {% if current_user.is_admin and tender.status.value == 'under_evaluation' %}
+  <a href="{{ url_for('tenders.evaluation', tender_id=tender.id) }}" class="btn btn-gov-primary">
+    <i class="bi bi-bar-chart me-2"></i>Evaluation Report
+  </a>
+  {% endif %}
+</div>
+
+<div class="card-gov">
+  {% if tender.status.value not in ['under_evaluation', 'awarded'] %}
+  <div class="p-3" style="background:#fff8e1;border-bottom:1px solid var(--border)">
+    <i class="bi bi-lock me-2" style="color:#e65100"></i>
+    <strong style="color:#e65100">Bids are sealed.</strong>
+    Amounts are hidden until the official opening. Only metadata is visible.
+  </div>
+  {% endif %}
+  <div class="card-gov-body p-0">
+    <div class="table-responsive">
+      <table class="table table-gov mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Vendor</th>
+            <th>Organization</th>
+            <th>Submitted At</th>
+            <th>Documents</th>
+            <th>Amount</th>
+            <th>Rank</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bid in bids %}
+          <tr style="{% if bid.is_l1 %}background:rgba(26,122,74,.04){% endif %}">
+            <td style="font-weight:600;color:var(--text-muted)">{{ loop.index }}</td>
+            <td>
+              <div style="font-weight:600;font-size:.875rem">{{ bid.vendor.name }}</div>
+              <div style="font-size:.72rem;color:var(--text-muted)">{{ bid.vendor.email }}</div>
+            </td>
+            <td style="font-size:.82rem">{{ bid.vendor.organization or '—' }}</td>
+            <td style="font-size:.78rem;color:var(--text-secondary);white-space:nowrap">
+              {{ bid.submitted_at.strftime('%d %b %Y %H:%M') }}
+            </td>
+            <td>
+              <span style="font-size:.82rem;color:var(--text-secondary)">
+                {{ bid.documents.count() }} file{{ 's' if bid.documents.count() != 1 }}
+              </span>
+            </td>
+            <td>
+              {% if bid.is_revealed and bid.bid_amount %}
+              <div style="font-family:'Rajdhani',sans-serif;font-weight:700;
+                          color:{% if bid.is_l1 %}var(--success){% else %}var(--text-primary){% endif %}">
+                ₹{{ "{:,.0f}".format(bid.bid_amount) }}
+              </div>
+              {% else %}
+              <span class="badge-encrypted">🔒</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if bid.rank %}
+              <span style="font-weight:700;color:{% if bid.is_l1 %}var(--success){% else %}var(--text-secondary){% endif %}">
+                {% if bid.is_l1 %}L1 🥇{% else %}L{{ bid.rank }}{% endif %}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td><span class="status-badge status-{{ bid.status.value }}">{{ bid.status.value|replace('_',' ')|title }}</span></td>
+            <td>
+              <a href="{{ url_for('bids.view', bid_id=bid.id) }}"
+                 class="btn btn-gov-outline btn-sm" style="font-size:.72rem;padding:.2rem .5rem">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="9" class="text-center py-4 text-muted">No bids submitted for this tender.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

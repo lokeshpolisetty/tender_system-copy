@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block title %}{{ tender.title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb breadcrumb-gov">
+    <li class="breadcrumb-item"><a href="{{ url_for('tenders.list_tenders') }}">Tenders</a></li>
+    <li class="breadcrumb-item active">{{ tender.tender_number }}</li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+  <!-- ── Left column: main details ── -->
+  <div class="col-lg-8">
+
+    <!-- Header card -->
+    <div class="card-gov mb-4">
+      <div style="height:6px;background:linear-gradient(90deg,var(--primary),var(--accent))"></div>
+      <div class="card-gov-body">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
+          <div>
+            <div class="tender-number mb-1">{{ tender.tender_number }}</div>
+            <h1 style="font-family:'Rajdhani',sans-serif;font-size:1.6rem;font-weight:700;
+                        color:var(--text-primary);line-height:1.3;margin:0">
+              {{ tender.title }}
+            </h1>
+          </div>
+          <span class="status-badge status-{{ tender.status.value }} align-self-start">
+            {{ tender.status.value|replace('_',' ')|title }}
+          </span>
+        </div>
+
+        <p style="color:var(--text-secondary);line-height:1.7;margin-bottom:1.5rem">
+          {{ tender.description }}
+        </p>
+
+        <!-- Quick meta grid -->
+        <div class="row g-3">
+          {% set meta = [
+            ('bi-building','Department', tender.department or '—'),
+            ('bi-tag','Category', tender.category or '—'),
+            ('bi-geo-alt','Location', tender.location or '—'),
+            ('bi-currency-rupee','Estimated Budget','₹{:,.0f}'.format(tender.estimated_budget)),
+            ('bi-bank','EMD Amount','₹{:,.0f}'.format(tender.emd_amount) if tender.emd_amount else '—'),
+            ('bi-receipt','Tender Fee','₹{:,.0f}'.format(tender.tender_fee) if tender.tender_fee else 'Free'),
+            ('bi-calculator','Evaluation','L1 (Lowest Bidder)' if tender.evaluation_method == 'L1' else tender.evaluation_method),
+            ('bi-people','Bids Received', tender.bid_count|string),
+          ] %}
+          {% for icon, label, val in meta %}
+          <div class="col-md-6">
+            <div style="background:#f8faff;border-radius:8px;padding:.7rem .9rem;
+                        border:1px solid var(--border)">
+              <div style="font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;
+                          letter-spacing:.5px;margin-bottom:.15rem">
+                <i class="bi {{ icon }} me-1"></i>{{ label }}
+              </div>
+              <div style="font-weight:600;color:var(--text-primary);font-size:.9rem">{{ val }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline card -->
+    <div class="card-gov mb-4">
+      <div class="card-header-gov"><i class="bi bi-calendar3 me-2"></i>Important Dates</div>
+      <div class="card-gov-body">
+        <div class="row g-3">
+          {% set dates = [
+            ('Published', tender.published_at, 'bi-megaphone'),
+            ('Bidding Opens', tender.bid_start_date, 'bi-unlock'),
+            ('Pre-Bid Meeting', tender.pre_bid_meeting, 'bi-chat-dots'),
+            ('Submission Deadline', tender.bid_end_date, 'bi-lock'),
+            ('Bid Opening', tender.opening_date, 'bi-eye'),
+          ] %}
+          {% for label, dt, icon in dates %}
+          {% if dt %}
+          <div class="col-md-6">
+            <div style="display:flex;align-items:center;gap:.8rem;padding:.6rem;
+                        border-radius:8px;background:#f8faff;border:1px solid var(--border)">
+              <div style="width:36px;height:36px;border-radius:8px;background:var(--primary);
+                          display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi {{ icon }}" style="color:#fff;font-size:.9rem"></i>
+              </div>
+              <div>
+                <div style="font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase">{{ label }}</div>
+                <div style="font-weight:600;font-size:.875rem">{{ dt.strftime('%d %b %Y, %H:%M') }}</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        <!-- Deadline countdown -->
+        {% if tender.is_open_for_bidding %}
+        <div class="mt-3 p-3" style="background:linear-gradient(135deg,#e6f4ea,#d4edda);
+                                       border-radius:10px;border-left:4px solid var(--success)">
+          <strong style="color:var(--success)"><i class="bi bi-clock me-2"></i>Open for Bidding</strong>
+          — {{ tender.days_remaining }} day{{ 's' if tender.days_remaining != 1 }} remaining
+        </div>
+        {% elif tender.is_bidding_not_started %}
+        <div class="mt-3 p-3" style="background:#e8f0fe;border-radius:10px;border-left:4px solid var(--primary)">
+          <strong style="color:var(--primary)"><i class="bi bi-hourglass-split me-2"></i>Bidding Not Started</strong>
+          — Bidding opens on {{ tender.bid_start_date.strftime('%d %b %Y, %H:%M') }}
+        </div>
+        {% elif tender.is_bidding_closed %}
+        <div class="mt-3 p-3" style="background:#fce8e6;border-radius:10px;border-left:4px solid var(--danger)">
+          <strong style="color:var(--danger)"><i class="bi bi-lock me-2"></i>Bidding Closed</strong>
+          — Submission deadline has passed
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Eligibility -->
+    {% if tender.eligibility_dict %}
+    <div class="card-gov mb-4">
+      <div class="card-header-gov"><i class="bi bi-check-circle me-2"></i>Eligibility Criteria</div>
+      <div class="card-gov-body">
+        <dl class="row mb-0">
+          {% for key, val in tender.eligibility_dict.items() if val %}
+          <dt class="col-sm-5 text-muted" style="font-size:.82rem">{{ key|replace('_',' ')|title }}</dt>
+          <dd class="col-sm-7" style="font-size:.875rem;font-weight:500">{{ val }}</dd>
+          {% endfor %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Documents -->
+    {% if documents %}
+    <div class="card-gov mb-4">
+      <div class="card-header-gov"><i class="bi bi-paperclip me-2"></i>Tender Documents</div>
+      <div class="card-gov-body">
+        <div class="list-group list-group-flush">
+          {% for doc in documents %}
+          <div class="list-group-item d-flex align-items-center justify-content-between px-0"
+               style="border-color:var(--border)">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:36px;height:36px;border-radius:8px;
+                          background:{% if doc.file_type == 'pdf' %}#fce8e6{% else %}#e8f0fe{% endif %};
+                          display:flex;align-items:center;justify-content:center">
+                <i class="bi bi-file-earmark-{{ 'pdf' if doc.file_type == 'pdf' else 'word' }}"
+                   style="color:{% if doc.file_type == 'pdf' %}#c62828{% else %}#1565c0{% endif %}"></i>
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:.875rem">{{ doc.original_filename }}</div>
+                {% if doc.description %}
+                <div style="font-size:.78rem;color:var(--text-muted)">{{ doc.description }}</div>
+                {% endif %}
+              </div>
+            </div>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('tenders.download_document', doc_id=doc.id) }}"
+               class="btn btn-gov-outline btn-sm" style="font-size:.78rem">
+              <i class="bi bi-download me-1"></i>Download
+            </a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Right column: action panel ── -->
+  <div class="col-lg-4">
+
+    <!-- Action card -->
+    <div class="card-gov mb-4" style="position:sticky;top:1rem">
+      <div class="card-header-gov"><i class="bi bi-lightning me-2"></i>Actions</div>
+      <div class="card-gov-body">
+
+        {% if current_user.is_authenticated %}
+          {% if current_user.is_vendor %}
+            {% if vendor_bid %}
+            <!-- Already submitted -->
+            <div class="mb-3 p-3" style="background:#e6f4ea;border-radius:10px;border-left:4px solid var(--success)">
+              <div style="font-weight:700;color:var(--success);margin-bottom:.3rem">
+                <i class="bi bi-check-circle me-2"></i>Bid Submitted
+              </div>
+              <div style="font-size:.82rem;color:#155724">
+                Submitted on {{ vendor_bid.submitted_at.strftime('%d %b %Y') }}<br>
+                <span class="badge-encrypted mt-1 d-inline-block">🔒 Encrypted & Sealed</span>
+              </div>
+            </div>
+            <a href="{{ url_for('bids.view', bid_id=vendor_bid.id) }}"
+               class="btn btn-gov-outline w-100 mb-2">
+              <i class="bi bi-eye me-2"></i>View My Bid
+            </a>
+            {% elif tender.is_open_for_bidding %}
+            <a href="{{ url_for('bids.submit', tender_id=tender.id) }}"
+               class="btn btn-gov-primary w-100 mb-2" style="font-size:1rem">
+              <i class="bi bi-send me-2"></i>Submit Bid Now
+            </a>
+            <div style="font-size:.75rem;text-align:center;color:var(--text-muted)">
+              <i class="bi bi-lock me-1"></i>Your bid will be encrypted until opening
+            </div>
+            {% elif tender.is_bidding_not_started %}
+            <div class="p-3 text-center" style="background:#e8f0fe;border-radius:10px;border:1px solid var(--border)">
+              <i class="bi bi-hourglass-split d-block fs-2 mb-2" style="color:var(--primary)"></i>
+              <div style="font-size:.875rem;color:var(--text-secondary)">
+                Bidding opens on {{ tender.bid_start_date.strftime('%d %b %Y, %H:%M') }}
+              </div>
+            </div>
+            {% else %}
+            <div class="p-3 text-center" style="background:#f5f5f5;border-radius:10px">
+              <i class="bi bi-clock-history d-block fs-2 mb-2 text-muted"></i>
+              <div style="font-size:.875rem;color:var(--text-secondary)">Bidding is closed for this tender</div>
+            </div>
+            {% endif %}
+
+          {% elif current_user.is_admin %}
+            <!-- Admin actions -->
+            {% if tender.status.value == 'draft' %}
+            <form method="POST" action="{{ url_for('tenders.publish', tender_id=tender.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-gov-primary w-100 mb-2">
+                <i class="bi bi-megaphone me-2"></i>Publish Tender
+              </button>
+            </form>
+            <a href="{{ url_for('tenders.edit', tender_id=tender.id) }}"
+               class="btn btn-gov-outline w-100 mb-2">
+              <i class="bi bi-pencil me-2"></i>Edit Tender
+            </a>
+            {% endif %}
+            {% if tender.status.value in ['published', 'closed'] %}
+            <form method="POST" action="{{ url_for('tenders.open_bids', tender_id=tender.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-gov-primary w-100 mb-2"
+                      {% if tender.is_open_for_bidding %}disabled title="Cannot open before deadline"{% endif %}>
+                <i class="bi bi-unlock me-2"></i>Open Bids
+              </button>
+            </form>
+            {% endif %}
+            {% if tender.status.value == 'under_evaluation' %}
+            <a href="{{ url_for('tenders.evaluation', tender_id=tender.id) }}"
+               class="btn btn-gov-primary w-100 mb-2">
+              <i class="bi bi-bar-chart me-2"></i>View Evaluation
+            </a>
+            {% endif %}
+            <a href="{{ url_for('bids.all_bids_for_tender', tender_id=tender.id) }}"
+               class="btn btn-gov-outline w-100 mb-2">
+              <i class="bi bi-collection me-2"></i>View All Bids ({{ tender.bid_count }})
+            </a>
+            {% if tender.status.value not in ['awarded','cancelled'] %}
+            <form method="POST" action="{{ url_for('tenders.cancel', tender_id=tender.id) }}"
+                  onsubmit="return confirm('Cancel this tender? This cannot be undone.')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-danger w-100 btn-sm mt-1">
+                <i class="bi bi-x-circle me-2"></i>Cancel Tender
+              </button>
+            </form>
+            {% endif %}
+
+          {% elif current_user.is_auditor %}
+            <a href="{{ url_for('bids.all_bids_for_tender', tender_id=tender.id) }}"
+               class="btn btn-gov-outline w-100 mb-2">
+              <i class="bi bi-eye me-2"></i>View Bids ({{ tender.bid_count }})
+            </a>
+          {% endif %}
+        {% else %}
+          <div class="text-center">
+            <p style="font-size:.875rem;color:var(--text-secondary)">Log in to submit a bid or take actions.</p>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-gov-primary w-100">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Log In
+            </a>
+          </div>
+        {% endif %}
+
+        <!-- Contact info -->
+        {% if tender.contact_name or tender.contact_email %}
+        <hr style="border-color:var(--border)">
+        <div style="font-size:.8rem">
+          <div class="section-heading" style="font-size:.85rem">Contact Officer</div>
+          {% if tender.contact_name %}<div><i class="bi bi-person me-2 text-muted"></i>{{ tender.contact_name }}</div>{% endif %}
+          {% if tender.contact_email %}<div class="mt-1"><i class="bi bi-envelope me-2 text-muted"></i>
+            <a href="mailto:{{ tender.contact_email }}" style="color:var(--primary-light)">{{ tender.contact_email }}</a></div>{% endif %}
+          {% if tender.contact_phone %}<div class="mt-1"><i class="bi bi-telephone me-2 text-muted"></i>{{ tender.contact_phone }}</div>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

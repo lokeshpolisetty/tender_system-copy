@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Fraud Detection{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar d-none d-lg-flex flex-column">
+  <div class="sidebar-heading">Analytics</div>
+  <a class="nav-link" href="{{ url_for('analytics.dashboard') }}"><i class="bi bi-bar-chart-line"></i>Overview</a>
+  <a class="nav-link" href="{{ url_for('analytics.audit_log') }}"><i class="bi bi-journal-text"></i>Audit Log</a>
+  <a class="nav-link active" href="{{ url_for('analytics.fraud_detection') }}"><i class="bi bi-shield-exclamation"></i>Fraud Detection</a>
+  <div class="sidebar-heading">Navigation</div>
+  <a class="nav-link" href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2"></i>Dashboard</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-shield-exclamation me-2"></i>Fraud & Anomaly Detection</h1>
+    <p class="page-subtitle">Automated heuristics for cartelization, repeated winners, and abnormal bids</p>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="row g-3 mb-4">
+  {% for sev, icon, color, bg, label, desc in [
+    ('high','bi-exclamation-octagon-fill','#c62828','#fce8e6','High Severity','Possible bid rigging or cartelization'),
+    ('medium','bi-exclamation-triangle-fill','#e65100','#fff3e0','Medium Severity','Repeated winners or pattern anomalies'),
+    ('low','bi-info-circle-fill','#137333','#e6f4ea','Low Severity','Unusually low bids requiring review'),
+  ] %}
+  <div class="col-md-4">
+    <div style="background:{{ bg }};border-radius:10px;padding:1rem 1.2rem;border-left:4px solid {{ color }}">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
+        <i class="bi {{ icon }}" style="color:{{ color }}"></i>
+        <strong style="color:{{ color }};font-size:.875rem">{{ label }}</strong>
+      </div>
+      <div style="font-size:.78rem;color:{{ color }};opacity:.8">{{ desc }}</div>
+      <div style="font-size:1.2rem;font-family:'Rajdhani',sans-serif;font-weight:700;color:{{ color }};margin-top:.3rem">
+        {{ alerts | selectattr('severity','eq',sev) | list | length }}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if alerts %}
+  {% for alert in alerts %}
+  <div class="card-gov mb-3 fraud-alert-{{ alert.severity }}">
+    <div class="card-gov-body">
+      <div class="d-flex align-items-start gap-3">
+        <div style="width:42px;height:42px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+                    background:{% if alert.severity=='high' %}#fce8e6{% elif alert.severity=='medium' %}#fff3e0{% else %}#e6f4ea{% endif %}">
+          <i class="bi bi-{% if alert.severity=='high' %}exclamation-octagon{% elif alert.severity=='medium' %}exclamation-triangle{% else %}info-circle{% endif %} fs-4"
+             style="color:{% if alert.severity=='high' %}#c62828{% elif alert.severity=='medium' %}#e65100{% else %}#137333{% endif %}"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                          background:{% if alert.severity=='high' %}#fce8e6{% elif alert.severity=='medium' %}#fff3e0{% else %}#e6f4ea{% endif %};
+                          color:{% if alert.severity=='high' %}#c62828{% elif alert.severity=='medium' %}#e65100{% else %}#137333{% endif %};
+                          padding:.2rem .6rem;border-radius:20px">
+              {{ alert.type|replace('_',' ')|upper }}
+            </span>
+            <span style="font-size:.72rem;font-weight:600;background:#f5f5f5;color:var(--text-secondary);
+                          padding:.2rem .6rem;border-radius:20px">{{ alert.severity|upper }}</span>
+          </div>
+          <p style="margin:0;color:var(--text-secondary);font-size:.875rem;line-height:1.6">{{ alert.message }}</p>
+
+          {% if alert.detail %}
+          <div class="mt-2">
+            {% if alert.type == 'cartelization' and alert.detail.bid_amounts %}
+            <div style="background:#f8faff;border-radius:8px;padding:.7rem;font-size:.8rem;border:1px solid var(--border)">
+              <strong>Bid amounts found:</strong>
+              {% for amt in alert.detail.bid_amounts %}
+              <span style="background:#e8f0fe;color:#1565c0;padding:.2rem .5rem;border-radius:4px;
+                            margin:.1rem;display:inline-block;font-family:'JetBrains Mono',monospace">
+                ₹{{ "{:,.0f}".format(amt) }}
+              </span>
+              {% endfor %}
+              <div class="mt-1">Bid spread: <strong>{{ alert.detail.spread_pct }}%</strong></div>
+            </div>
+            {% elif alert.type == 'repeated_winner' %}
+            <div style="background:#f8faff;border-radius:8px;padding:.7rem;font-size:.8rem;border:1px solid var(--border)">
+              <strong>Contracts won:</strong> {{ alert.detail.wins }}
+            </div>
+            {% elif alert.type == 'low_bid' and alert.detail %}
+            <div style="background:#f8faff;border-radius:8px;padding:.7rem;font-size:.8rem;border:1px solid var(--border)">
+              <strong>Bid:</strong> ₹{{ "{:,.0f}".format(alert.detail.bid_amount) }}
+              &nbsp;vs&nbsp;
+              <strong>Budget:</strong> ₹{{ "{:,.0f}".format(alert.detail.budget) }}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <div class="mt-2 d-flex gap-2">
+            {% if alert.tender_id is defined %}
+            <a href="{{ url_for('tenders.detail', tender_id=alert.tender_id) }}"
+               class="btn btn-gov-outline btn-sm" style="font-size:.75rem">
+              <i class="bi bi-eye me-1"></i>View Tender
+            </a>
+            <a href="{{ url_for('bids.all_bids_for_tender', tender_id=alert.tender_id) }}"
+               class="btn btn-gov-outline btn-sm" style="font-size:.75rem">
+              <i class="bi bi-collection me-1"></i>View Bids
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="text-center py-5">
+  <div style="font-size:4rem;margin-bottom:1rem">🛡️</div>
+  <h4 style="color:#137333;font-family:'Rajdhani',sans-serif">No Anomalies Detected</h4>
+  <p style="color:var(--text-muted)">All procurement activity appears within normal parameters.</p>
+</div>
+{% endif %}
+{% endblock %}

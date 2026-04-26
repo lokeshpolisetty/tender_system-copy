@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container { position:relative; height:280px; }
+.fraud-card { border-radius:10px; padding:1rem; margin-bottom:.75rem; background:#fff; border:1px solid var(--border); }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar d-none d-lg-flex flex-column">
+  <div class="sidebar-heading">Analytics</div>
+  <a class="nav-link active" href="{{ url_for('analytics.dashboard') }}">
+    <i class="bi bi-bar-chart-line"></i>Overview</a>
+  <a class="nav-link" href="{{ url_for('analytics.audit_log') }}">
+    <i class="bi bi-journal-text"></i>Audit Log</a>
+  <a class="nav-link" href="{{ url_for('analytics.fraud_detection') }}">
+    <i class="bi bi-shield-exclamation"></i>Fraud Detection</a>
+  <div class="sidebar-heading">Navigation</div>
+  <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+    <i class="bi bi-speedometer2"></i>Dashboard</a>
+  <a class="nav-link" href="{{ url_for('tenders.list_tenders') }}">
+    <i class="bi bi-file-earmark-text"></i>Tenders</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-bar-chart-line me-2"></i>Analytics Dashboard</h1>
+    <p class="page-subtitle">Procurement intelligence and anomaly detection</p>
+  </div>
+</div>
+
+<!-- KPI row -->
+<div class="row g-3 mb-4">
+  {% for val, label, icon, cls in [
+    (stats.total_tenders, 'Total Tenders', 'bi-file-earmark-text', 'stat-icon-blue'),
+    (stats.active_tenders, 'Active', 'bi-clock', 'stat-icon-green'),
+    (stats.awarded_tenders, 'Awarded', 'bi-award', 'stat-icon-purple'),
+    (stats.total_vendors, 'Vendors', 'bi-people', 'stat-icon-blue'),
+    (stats.total_bids, 'Total Bids', 'bi-collection', 'stat-icon-orange'),
+  ] %}
+  <div class="col-6 col-md">
+    <div class="stat-card">
+      <div class="stat-icon {{ cls }} mb-2"><i class="bi {{ icon }}"></i></div>
+      <div class="stat-value">{{ val }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="col-6 col-md">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green mb-2"><i class="bi bi-currency-rupee"></i></div>
+      <div class="stat-value" style="font-size:1.3rem">₹{{ "{:,.0f}".format(stats.total_awarded_value/100000) }}L</div>
+      <div class="stat-label">Awarded Value</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Monthly trend -->
+  <div class="col-lg-7">
+    <div class="card-gov">
+      <div class="card-header-gov"><i class="bi bi-graph-up me-2"></i>Monthly Tender Activity</div>
+      <div class="card-gov-body">
+        <div class="chart-container">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category distribution -->
+  <div class="col-lg-5">
+    <div class="card-gov">
+      <div class="card-header-gov"><i class="bi bi-pie-chart me-2"></i>By Category</div>
+      <div class="card-gov-body">
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Fraud alerts -->
+  <div class="col-lg-6">
+    <div class="card-gov">
+      <div class="card-header-gov d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-shield-exclamation me-2"></i>Fraud / Anomaly Alerts</span>
+        {% if fraud_alerts %}
+        <span class="badge bg-danger">{{ fraud_alerts|length }}</span>
+        {% endif %}
+      </div>
+      <div class="card-gov-body">
+        {% if fraud_alerts %}
+          {% for alert in fraud_alerts %}
+          <div class="fraud-card fraud-alert-{{ alert.severity }}">
+            <div class="d-flex align-items-start gap-3">
+              <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;
+                          align-items:center;justify-content:center;
+                          background:{% if alert.severity=='high' %}#fce8e6{% elif alert.severity=='medium' %}#fff3e0{% else %}#e6f4ea{% endif %}">
+                <i class="bi bi-{% if alert.severity=='high' %}exclamation-triangle{% elif alert.severity=='medium' %}exclamation-circle{% else %}info-circle{% endif %}"
+                   style="color:{% if alert.severity=='high' %}#c62828{% elif alert.severity=='medium' %}#e65100{% else %}#137333{% endif %}"></i>
+              </div>
+              <div>
+                <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                            color:{% if alert.severity=='high' %}#c62828{% elif alert.severity=='medium' %}#e65100{% else %}#137333{% endif %}">
+                  {{ alert.type|replace('_',' ')|upper }} — {{ alert.severity|upper }}
+                </div>
+                <div style="font-size:.82rem;color:var(--text-secondary);margin-top:.2rem;line-height:1.5">
+                  {{ alert.message }}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          <div class="mt-2">
+            <a href="{{ url_for('analytics.fraud_detection') }}" class="btn btn-gov-outline w-100 btn-sm">
+              View Full Report <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-shield-check fs-2 d-block mb-2" style="color:#137333"></i>
+          <div style="font-weight:600;color:#137333">No Anomalies Detected</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">All bids appear normal</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top vendors -->
+  <div class="col-lg-6">
+    <div class="card-gov">
+      <div class="card-header-gov"><i class="bi bi-trophy me-2"></i>Top Winning Vendors</div>
+      <div class="card-gov-body p-0">
+        {% if top_vendors %}
+        <table class="table table-gov mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Vendor</th>
+              <th>Wins</th>
+              <th>Total Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in top_vendors %}
+            <tr>
+              <td style="font-weight:700;color:{% if loop.index == 1 %}#f4a11d{% elif loop.index == 2 %}#9e9e9e{% elif loop.index == 3 %}#cd7f32{% else %}var(--text-muted){% endif %}">
+                {% if loop.index <= 3 %}<i class="bi bi-trophy-fill"></i>{% else %}{{ loop.index }}{% endif %}
+              </td>
+              <td>
+                <div style="font-weight:600;font-size:.875rem">{{ v.name }}</div>
+                <div style="font-size:.75rem;color:var(--text-muted)">{{ v.org or '' }}</div>
+              </td>
+              <td><span style="font-weight:700;font-size:1.1rem;font-family:'Rajdhani',sans-serif">{{ v.wins }}</span></td>
+              <td style="font-size:.82rem;font-weight:600;color:var(--success)">
+                ₹{{ "{:,.0f}".format(v.value) }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4 text-muted" style="font-size:.875rem">No awarded contracts yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const monthlyData = {{ monthly_data | tojson }};
+const categoryData = {{ category_data | tojson }};
+
+// Monthly trend chart
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: monthlyData.labels,
+    datasets: [{
+      label: 'Tenders Created',
+      data: monthlyData.data,
+      backgroundColor: 'rgba(13,59,110,.8)',
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f0f0f0' } },
+      x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+    }
+  }
+});
+
+// Category donut
+const palette = ['#0d3b6e','#1a5fa8','#f4a11d','#1a7a4a','#c0392b','#7b1fa2','#00838f','#558b2f'];
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: categoryData.labels,
+    datasets: [{
+      data: categoryData.data,
+      backgroundColor: palette,
+      borderWidth: 2, borderColor: '#fff',
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } }
+    },
+    cutout: '62%',
+  }
+});
+</script>
+{% endblock %}

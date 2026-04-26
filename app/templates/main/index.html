@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block body %}
+<!-- ── Hero ───────────────────────────────────────────────────────────────── -->
+<section style="background:linear-gradient(135deg,var(--primary) 0%,#1a5fa8 60%,#0a2a50 100%);
+                color:#fff;padding:4rem 0 3rem;position:relative;overflow:hidden">
+  <!-- Decorative pattern -->
+  <div style="position:absolute;inset:0;opacity:.04;
+              background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(255,255,255,1) 40px,rgba(255,255,255,1) 41px),
+                               repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,1) 40px,rgba(255,255,255,1) 41px)"></div>
+  <div class="container position-relative">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <div style="font-size:.8rem;font-weight:600;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:.7rem">
+          <i class="bi bi-shield-check me-2"></i>भारत सरकार — Government of India
+        </div>
+        <h1 style="font-family:'Rajdhani',sans-serif;font-size:3rem;font-weight:700;line-height:1.15;margin-bottom:1rem">
+          Transparent Government<br><span style="color:var(--accent)">e-Procurement Portal</span>
+        </h1>
+        <p style="font-size:1.05rem;color:rgba(255,255,255,.8);max-width:520px;line-height:1.7;margin-bottom:2rem">
+          A secure, auditable platform for government tenders, competitive bidding, 
+          and contract management — built on integrity and transparency.
+        </p>
+        <div class="d-flex gap-3 flex-wrap">
+          <a href="{{ url_for('tenders.list_tenders') }}" class="btn btn-gov-accent px-4 py-2" style="font-size:1rem">
+            <i class="bi bi-search me-2"></i>Browse Tenders
+          </a>
+          {% if not current_user.is_authenticated %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn-gov-outline px-4 py-2"
+             style="color:#fff;border-color:rgba(255,255,255,.4);font-size:1rem">
+            <i class="bi bi-person-plus me-2"></i>Register as Vendor
+          </a>
+          {% else %}
+          <a href="{{ url_for('main.dashboard') }}" class="btn btn-gov-outline px-4 py-2"
+             style="color:#fff;border-color:rgba(255,255,255,.4);font-size:1rem">
+            <i class="bi bi-speedometer2 me-2"></i>My Dashboard
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-5 d-none d-lg-block text-center">
+        <!-- Stats pill cluster -->
+        <div style="display:inline-flex;flex-direction:column;gap:1rem;align-items:flex-end">
+          {% set pill_stats = [
+            (stats.total_tenders, 'Total Tenders', 'bi-file-earmark-text'),
+            (stats.active_tenders, 'Active Now', 'bi-clock'),
+            (stats.awarded_tenders, 'Contracts Awarded', 'bi-award'),
+            (stats.registered_vendors, 'Registered Vendors', 'bi-people'),
+          ] %}
+          {% for val, label, icon in pill_stats %}
+          <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(10px);
+                      border:1px solid rgba(255,255,255,.15);border-radius:12px;
+                      padding:.8rem 1.4rem;text-align:right">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:2rem;font-weight:700;line-height:1">{{ val }}</div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.65)"><i class="bi {{ icon }} me-1"></i>{{ label }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Feature strip ──────────────────────────────────────────────────────── -->
+<section style="background:#fff;border-bottom:1px solid var(--border);padding:1.2rem 0">
+  <div class="container">
+    <div class="row g-0 text-center">
+      {% for icon, text in [
+        ('bi-lock','End-to-end Encrypted Bids'),
+        ('bi-shield-check','Immutable Audit Trail'),
+        ('bi-clock-history','Deadline Enforcement'),
+        ('bi-graph-up','Fraud Detection Analytics'),
+        ('bi-envelope-check','Real-time Notifications'),
+      ] %}
+      <div class="col">
+        <div style="padding:.8rem;font-size:.8rem;font-weight:600;color:var(--text-secondary)">
+          <i class="bi {{ icon }} me-2" style="color:var(--primary-light)"></i>{{ text }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ── Recent Tenders ─────────────────────────────────────────────────────── -->
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h2 style="font-family:'Rajdhani',sans-serif;font-size:1.8rem;font-weight:700;color:var(--primary);margin:0">
+          Latest Tenders
+        </h2>
+        <p class="text-muted mb-0" style="font-size:.875rem">Recently published government tenders open for bidding</p>
+      </div>
+      <a href="{{ url_for('tenders.list_tenders') }}" class="btn btn-gov-outline">
+        View All <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+
+    {% if recent_tenders %}
+    <div class="row g-4">
+      {% for tender in recent_tenders %}
+      <div class="col-md-6 col-lg-4">
+        <div class="tender-card h-100">
+          <div class="tender-card-accent"></div>
+          <div class="tender-card-body d-flex flex-column h-100">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+              <div class="tender-number">{{ tender.tender_number }}</div>
+              <span class="status-badge status-{{ tender.status.value }}">{{ tender.status.value|replace('_',' ')|title }}</span>
+            </div>
+            <a href="{{ url_for('tenders.detail', tender_id=tender.id) }}"
+               class="tender-title mb-2">{{ tender.title }}</a>
+            <p class="tender-meta mb-3">{{ tender.description[:100] }}{% if tender.description|length > 100 %}…{% endif %}</p>
+
+            <div class="mt-auto">
+              <div class="d-flex justify-content-between align-items-end">
+                <div>
+                  <div class="tender-meta mb-1"><i class="bi bi-building me-1"></i>{{ tender.department or 'N/A' }}</div>
+                  <div class="tender-budget">₹{{ "{:,.0f}".format(tender.estimated_budget) }}</div>
+                </div>
+                <div class="text-end">
+                  {% if tender.days_remaining == 0 %}
+                  <span class="deadline-badge deadline-urgent">Closed</span>
+                  {% elif tender.days_remaining <= 3 %}
+                  <span class="deadline-badge deadline-urgent"><i class="bi bi-fire me-1"></i>{{ tender.days_remaining }}d left</span>
+                  {% elif tender.days_remaining <= 7 %}
+                  <span class="deadline-badge deadline-warning"><i class="bi bi-clock me-1"></i>{{ tender.days_remaining }}d left</span>
+                  {% else %}
+                  <span class="deadline-badge deadline-normal"><i class="bi bi-calendar me-1"></i>{{ tender.days_remaining }}d left</span>
+                  {% endif %}
+                  <div class="tender-meta mt-1"><i class="bi bi-people me-1"></i>{{ tender.bid_count }} bids</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+      <p>No tenders published yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ── How it works ───────────────────────────────────────────────────────── -->
+<section style="background:#fff;padding:4rem 0;border-top:1px solid var(--border)">
+  <div class="container">
+    <h2 class="text-center mb-1" style="font-family:'Rajdhani',sans-serif;font-size:2rem;font-weight:700;color:var(--primary)">
+      How It Works
+    </h2>
+    <p class="text-center text-muted mb-5" style="font-size:.9rem">Simple, secure, and transparent procurement process</p>
+    <div class="row g-4">
+      {% for step, icon, title, desc in [
+        (1,'bi-megaphone','Tender Published','Government admin creates and publishes a tender with eligibility criteria and deadlines.'),
+        (2,'bi-person-check','Vendor Registers','Vendors register with their company details and digital signature.'),
+        (3,'bi-lock','Encrypted Bid Submission','Vendors submit encrypted bids with supporting documents before the deadline.'),
+        (4,'bi-unlock','Bid Opening & Evaluation','After deadline, bids are decrypted, ranked, and evaluated automatically.'),
+        (5,'bi-award','Contract Awarded','The L1 (lowest qualifying) bidder is awarded the contract with full audit trail.'),
+      ] %}
+      <div class="col-md-4 col-lg" style="text-align:center">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);
+                    color:#fff;display:inline-flex;align-items:center;justify-content:center;
+                    font-size:1.3rem;margin-bottom:1rem;position:relative">
+          <i class="bi {{ icon }}"></i>
+          <span style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+                        background:var(--accent);border-radius:50%;font-size:.65rem;
+                        font-weight:700;display:flex;align-items:center;justify-content:center;
+                        color:var(--primary)">{{ step }}</span>
+        </div>
+        <h5 style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text-primary)">{{ title }}</h5>
+        <p style="font-size:.82rem;color:var(--text-secondary);line-height:1.6">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto">
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-bell me-2"></i>Notifications</h1>
+</div>
+{% if notifications %}
+<div class="card-gov">
+  <div class="card-gov-body p-0">
+    {% for note in notifications %}
+    <div style="padding:1rem 1.2rem;border-bottom:1px solid var(--border);
+                background:{% if not note.is_read %}#f8faff{% else %}#fff{% endif %};
+                {% if loop.last %}border:none{% endif %}">
+      <div class="d-flex align-items-start gap-3">
+        <div style="width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+                    background:{% if note.notification_type == 'success' %}#e6f4ea{% elif note.notification_type == 'warning' %}#fff8e1{% elif note.notification_type == 'error' %}#fce8e6{% else %}#e8f0fe{% endif %}">
+          <i class="bi bi-{% if note.notification_type == 'success' %}check-circle{% elif note.notification_type == 'warning' %}exclamation-triangle{% elif note.notification_type == 'error' %}x-circle{% else %}info-circle{% endif %}"
+             style="color:{% if note.notification_type == 'success' %}#137333{% elif note.notification_type == 'warning' %}#e65100{% elif note.notification_type == 'error' %}#c62828{% else %}#1565c0{% endif %};font-size:.9rem"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.875rem">{{ note.title }}</div>
+          <div style="font-size:.82rem;color:var(--text-secondary);margin-top:.15rem">{{ note.message }}</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">
+            {{ note.created_at.strftime('%d %b %Y, %H:%M') }}
+          </div>
+        </div>
+        {% if not note.is_read %}
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:6px"></div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-bell-slash fs-1 d-block mb-3 opacity-25"></i>
+  <p>No notifications yet.</p>
+</div>
+{% endif %}
+</div>
+{% endblock %}
